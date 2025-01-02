@@ -1,3 +1,14 @@
+# Stan things
+^rcppExports.cpp$
+^stanExports_*
+
+# binaries
+.so
+.o
+
+# mac users
+.DS_Store
+
 # History files
 .Rhistory
 .Rapp.history
