@@ -3,8 +3,9 @@
 ^stanExports_*
 
 # binaries
-.so
-.o
+*.so
+*.o
+*.dll
 
 # mac users
 .DS_Store
