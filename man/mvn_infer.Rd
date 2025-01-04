@@ -47,7 +47,7 @@ a Stan sample object
 MCMC sampling for data from single study
 }
 \details{
-This generates a stan sample for MVN data from a single study
+This generates a Stan sample for MVN data from a single study
 }
 \author{
 Pete Dodd
