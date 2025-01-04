@@ -2,10 +2,13 @@
 
 export(mvn_infer)
 export(mvn_simulate)
+export(sample_study)
+export(simulate_studies)
 import(MASS)
 import(Rcpp)
 import(methods)
 import(rstan)
+import(trialr)
 importFrom(RcppParallel,RcppParallelLibs)
 importFrom(rstan,sampling)
 importFrom(rstantools,rstan_config)
