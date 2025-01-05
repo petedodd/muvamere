@@ -44,3 +44,66 @@ mvn_infer <- function(Y,X,Z,
                   cores = cores,
                   iter = iter, ...)
 }
+
+
+##' MCMC sampling for data from multiple studies
+##'
+##' This generates a Stan sample for MVN data from a multiple studies
+##'
+##' @title mvn_infer_mlm
+##' @param Y multivariate response data - each line sign/symptom values for a patient
+##' @param X multivariable explanatory data - each line a set of predictors for a patient
+##' @param study vector of which study each record belongs to
+##' @param betaM_prior_sd prior for Betas
+##' @param betaS_prior_sd prior for Betas
+##' @param tauM_prior_sd prior for tau
+##' @param tauS_prior_sd prior for tau
+##' @param lkj_local_prior_scale prior for local cor
+##' @param lkj_global_prior_scale prior for global cor
+##' @param rhoA beta parameter for rho
+##' @param rhoB beta parameter for rho
+##' @param iter iterations for MCMC, default
+##' @param cores number of cores to use
+##' @param chains number of chains to use
+##' @param ... 
+##' @return a Stan sample object
+##' @author Pete Dodd
+##' @export
+##' @import rstan
+mvn_infer_mlm <- function(Y, X, study,
+                          betaM_prior_sd = 1, # prior for Betas
+                          betaS_prior_sd = 0.5, # prior for Betas
+                          tauM_prior_sd = 1, # prior for tau
+                          tauS_prior_sd = 0.5, # prior for tau
+                          lkj_local_prior_scale = 3, # prior for local cor
+                          lkj_global_prior_scale = 2, # prior for global cor
+                          rhoA = 2, # beta parameter for rho
+                          rhoB = 2, # beta parameter for rho
+                          iter = 2e3, cores = 4, chains = 4, ...) {
+  ## prepare data
+  shdata <- list(
+    Nrecords = nrow(Y), # number of records/patients
+    Nstudies = length(study), # number of studies
+    study = study, # which study does each record correspond to? [Nrecords]
+    NP = ncol(X), # number of variables
+    NV = ncol(Y), # number of variates
+    X = X, # covariate data [Nrecords,NP]
+    Y = Y, # outcomes [Nrecords,NV]
+    betaM_prior_sd = betaM_prior_sd, # prior for Betas
+    betaS_prior_sd = betaS_prior_sd, # prior for Betas
+    tauM_prior_sd = tauM_prior_sd, # prior for tau
+    tauS_prior_sd = tauS_prior_sd, # prior for tau
+    lkj_local_prior_scale = lkj_local_prior_scale, # prior for local cor
+    lkj_global_prior_scale = lkj_global_prior_scale, # prior for global cor
+    rhoA = rhoA, # beta parameter for rho
+    rhoB = rhoB # beta parameter for rho
+  )
+
+  ## sample
+  rstan::sampling(stanmodels$mvn_inferH,
+    data = shdata,
+    chains = chains,
+    cores = cores,
+    iter = iter, ...
+  )
+}
