@@ -82,7 +82,7 @@ mvn_simulate_studies <- function(Xlist,
                              lkj_local, lkj_global) {
   ## sample globals:
   rho <- rbeta(1, rhoA, rhoB)
-  OmegaG <- trialr::rlkjcorr(1, nrow(betag), lkj_global)
+  OmegaG <- trialr::rlkjcorr(1, ncol(betag), lkj_global)
   ## loop over studies
   SS <- list()
   for (i in 1:length(Xlist)) {
