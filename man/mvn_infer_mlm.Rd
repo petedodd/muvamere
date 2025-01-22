@@ -54,7 +54,7 @@ mvn_infer_mlm(
 \item{...}{}
 }
 \value{
-a Stan sample objct
+a Stan sample object
 }
 \description{
 MCMC sampling for data from multiple studies

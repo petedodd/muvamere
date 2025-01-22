@@ -19,7 +19,9 @@ parameters{
 transformed parameters{
   matrix[Nobs,NV] mu = X * Beta; //mean responses
   vector<lower=0>[NV] tau = tau_prior_sd * tan(tau_unif);//gives Cauchy
-  matrix[NV, NV] omega = diag_pre_multiply(tau, L_Omega);// * z matrix to get var Sigma  
+  matrix[NV, NV] L = diag_pre_multiply(tau, L_Omega);// * z matrix to get var Sigma
+  matrix[Nobs,NV] Yresid = Y-mu;  
+  matrix[NV,Nobs] z = mdivide_left_tri_low(L,Yresid'); //should be std normal: same as X2 = Z * L' in cholsim.stan  
 }
 model{
   //priors
@@ -27,10 +29,8 @@ model{
   to_vector(Beta) ~ normal(0, beta_prior_sd);
 
   //likelihood
-  for(n in 1:Nobs){
-    Y[n] ~ multi_normal_cholesky(mu[n],omega);
-  }
-
+  to_vector(z) ~ std_normal();
+  target += -Nobs * sum(log(diagonal(L))); //jacobian
 }
 generated quantities{
 
