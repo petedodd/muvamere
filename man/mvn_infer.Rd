@@ -36,8 +36,6 @@ mvn_infer(
 
 \item{chains}{number of chains to use}
 
-\item{...}{}
-
 \item{prior}{for tau Cauchy scale in correlations, default=2.5}
 }
 \value{

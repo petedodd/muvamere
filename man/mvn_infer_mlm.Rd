@@ -50,8 +50,6 @@ mvn_infer_mlm(
 \item{cores}{number of cores to use}
 
 \item{chains}{number of chains to use}
-
-\item{...}{}
 }
 \value{
 a Stan sample object

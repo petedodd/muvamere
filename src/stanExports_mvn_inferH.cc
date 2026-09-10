@@ -2,12 +2,12 @@
 
 #include <Rcpp.h>
 using namespace Rcpp ;
-#include "stanExports_mvn_infer1e.h"
+#include "stanExports_mvn_inferH.h"
 
-RCPP_MODULE(stan_fit4mvn_infer1e_mod) {
+RCPP_MODULE(stan_fit4mvn_inferH_mod) {
 
 
-    class_<rstan::stan_fit<stan_model, boost::ecuyer1988> >("rstantools_model_mvn_infer1e")
+    class_<rstan::stan_fit<stan_model, boost::ecuyer1988> >("rstantools_model_mvn_inferH")
 
     .constructor<SEXP,SEXP,SEXP>()
 

@@ -14,4 +14,9 @@ Stan Development Team (NA). RStan: the R interface to Stan. R package version 2.
 \author{
 \strong{Maintainer}: Pete Dodd \email{p.j.dodd@sheffield.ac.uk} (\href{https://orcid.org/0000-0001-5825-9347}{ORCID})
 
+Authors:
+\itemize{
+  \item Pete Dodd \email{p.j.dodd@sheffield.ac.uk} (\href{https://orcid.org/0000-0001-5825-9347}{ORCID})
+}
+
 }

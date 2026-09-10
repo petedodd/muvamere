@@ -33,5 +33,5 @@ model{
   target += -Nobs * sum(log(diagonal(L))); //jacobian
 }
 generated quantities{
-
+  cov_matrix[NV] Sigma = L * L'; //L = diag_pre_multiply(tau, L_Omega) is already Sigma's Cholesky factor
 }

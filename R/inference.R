@@ -15,16 +15,16 @@
 ##' @param iter iterations for MCMC, default = 2e3
 ##' @param cores number of cores to use
 ##' @param chains number of chains to use
-##' @param ... 
+##' @param ...
 ##' @return a Stan sample object
 ##' @author Pete Dodd
 ##' @import rstan
 ##' @export
-mvn_infer <- function(Y,X,Z,
+mvn_infer <- function(Y, X, Z,
                       beta_prior_sd = 5, # prior for Betas, def=5
                       tau_prior_sd = 2.5, # prior for tau,   def=2.5
                       lkj_prior_scale = 2, # prior for cor, def=2
-                      iter=2e3,cores=4,chains=4,...){
+                      iter = 2e3, cores = 4, chains = 4, ...) {
   ## prepare data
   sdata <- list(
     Nobs = nrow(Y), # number of observations
@@ -39,11 +39,13 @@ mvn_infer <- function(Y,X,Z,
 
   ## sample
   rstan::sampling(stanmodels$mvn_infer1e,
-                  data = sdata,
-                  chains = chains,
-                  cores = cores,
-                  iter = iter, ...)
+    data = sdata,
+    chains = chains,
+    cores = cores,
+    iter = iter, ...
+  )
 }
+
 
 
 ##' MCMC sampling for data from multiple studies
@@ -65,7 +67,7 @@ mvn_infer <- function(Y,X,Z,
 ##' @param iter iterations for MCMC, default
 ##' @param cores number of cores to use
 ##' @param chains number of chains to use
-##' @param ... 
+##' @param ...
 ##' @return a Stan sample object
 ##' @author Pete Dodd
 ##' @export
@@ -83,7 +85,7 @@ mvn_infer_mlm <- function(Y, X, study,
   ## prepare data
   shdata <- list(
     Nrecords = nrow(Y), # number of records/patients
-    Nstudies = length(study), # number of studies
+    Nstudies = length(unique(study)), # number of distinct studies
     study = study, # which study does each record correspond to? [Nrecords]
     NP = ncol(X), # number of variables
     NV = ncol(Y), # number of variates
@@ -107,3 +109,4 @@ mvn_infer_mlm <- function(Y, X, study,
     iter = iter, ...
   )
 }
+
