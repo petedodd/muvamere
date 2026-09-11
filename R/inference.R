@@ -7,7 +7,11 @@
 ##' @title mvn_infer
 ##' @param Y multivariate response data - each line sign/symptom values for a patient
 ##' @param X multivariable explanatory data - each line a set of predictors for a patient
-##' @param Z new X to predict/simulate on (TODO)
+##' @param Z optional new covariate data to predict/simulate Y for (NP columns, same as X;
+##'   any number of rows). If supplied, the returned stanfit also carries a generated
+##'   quantity `Ynew` (NewObs x NV) with one posterior-predictive draw of Y per MCMC
+##'   iteration for each row of Z - extract with \code{mvn_extract_predictions()}.
+##'   Default NULL fits the model with no prediction (NewObs=0).
 ##' @param beta_prior_sd prior for Betas, default=5
 ##' @param tau_prior_sd = 2.5,
 ##' @param prior for tau Cauchy scale in correlations, default=2.5
@@ -20,11 +24,17 @@
 ##' @author Pete Dodd
 ##' @import rstan
 ##' @export
-mvn_infer <- function(Y, X, Z,
+mvn_infer <- function(Y, X, Z = NULL,
                       beta_prior_sd = 5, # prior for Betas, def=5
                       tau_prior_sd = 2.5, # prior for tau,   def=2.5
                       lkj_prior_scale = 2, # prior for cor, def=2
                       iter = 2e3, cores = 4, chains = 4, ...) {
+  if (!is.null(Z) && ncol(Z) != ncol(X)) {
+    stop(
+      "Z must have the same number of columns as X (",
+      ncol(X), "), got ", ncol(Z)
+    )
+  }
   ## prepare data
   sdata <- list(
     Nobs = nrow(Y), # number of observations
@@ -34,7 +44,13 @@ mvn_infer <- function(Y, X, Z,
     Y = Y, # outcomes
     beta_prior_sd = beta_prior_sd, # prior for Betas, def=5
     tau_prior_sd = tau_prior_sd, # prior for tau,   def=2.5
-    lkj_prior_scale = lkj_prior_scale # prior for cor, def=2
+    lkj_prior_scale = lkj_prior_scale, # prior for cor, def=2
+    NewObs = if (is.null(Z)) 0 else nrow(Z), # number of new obs to predict for
+    Z = if (is.null(Z)) {
+      matrix(numeric(0), 0, ncol(X))
+    } else {
+      Z
+    } # covariate data for prediction
   )
 
   ## sample
@@ -44,6 +60,29 @@ mvn_infer <- function(Y, X, Z,
     cores = cores,
     iter = iter, ...
   )
+}
+
+
+
+##' Extract posterior-predictive draws for new covariate data from a mvn_infer() fit
+##'
+##' Pulls the \code{Ynew} generated quantity (populated only if \code{mvn_infer()} was
+##' called with a non-NULL \code{Z}) out of a stanfit and reshapes it into a proper
+##' 3-D array indexed [draw, new observation, variate], rather than leaving the caller
+##' to reshape rstan's flattened, row-major summary output by hand (see the row-major
+##' reshape note in \code{mvn_extract_hyperparams()}/the package TODO list).
+##'
+##' @title mvn_extract_predictions
+##' @param fit a stanfit object returned by \code{mvn_infer()}, called with non-NULL Z
+##' @return a 3-D array [ndraws, NewObs, NV] of posterior-predictive draws of Ynew
+##' @author Pete Dodd
+##' @export
+mvn_extract_predictions <- function(fit) {
+  draws <- rstan::extract(fit, pars = "Ynew")$Ynew
+  if (is.null(draws) || prod(dim(draws)[-1]) == 0) {
+    stop("fit has no (non-empty) Ynew: was mvn_infer() called with a non-NULL Z?")
+  }
+  draws # rstan::extract() already returns this correctly shaped as [draw, NewObs, NV]
 }
 
 
@@ -109,4 +148,3 @@ mvn_infer_mlm <- function(Y, X, study,
     iter = iter, ...
   )
 }
-

@@ -7,7 +7,7 @@
 mvn_infer(
   Y,
   X,
-  Z,
+  Z = NULL,
   beta_prior_sd = 5,
   tau_prior_sd = 2.5,
   lkj_prior_scale = 2,
@@ -22,7 +22,11 @@ mvn_infer(
 
 \item{X}{multivariable explanatory data - each line a set of predictors for a patient}
 
-\item{Z}{new X to predict/simulate on (TODO)}
+\item{Z}{optional new covariate data to predict/simulate Y for (NP columns, same as X;
+any number of rows). If supplied, the returned stanfit also carries a generated
+quantity \code{Ynew} (NewObs x NV) with one posterior-predictive draw of Y per MCMC
+iteration for each row of Z - extract with \code{mvn_extract_predictions()}.
+Default NULL fits the model with no prediction (NewObs=0).}
 
 \item{beta_prior_sd}{prior for Betas, default=5}
 

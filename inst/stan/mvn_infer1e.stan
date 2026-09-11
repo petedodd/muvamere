@@ -7,6 +7,10 @@ data{
   real beta_prior_sd;//prior for Betas, def=5
   real tau_prior_sd; //prior for tau,   def=2.5
   real lkj_prior_scale;//prior for cor, def=2
+  int NewObs;// number of new observations to predict for; 0 for none
+  matrix[NewObs,NP] Z; //covariate data to predict/simulate on (NP columns, not NV --
+  //this dimension was wrong in the original mvn_infer1be.stan prototype, only masked
+  //there because its one test happened to use NP==NV)
 }
 transformed data{
 
@@ -34,4 +38,14 @@ model{
 }
 generated quantities{
   cov_matrix[NV] Sigma = L * L'; //L = diag_pre_multiply(tau, L_Omega) is already Sigma's Cholesky factor
+  matrix[NewObs,NV] Ynew; //declared unconditionally (top-level) so it's always a real
+  //output, even when NewObs==0 (an empty matrix) -- a variable declared only inside an
+  //if-block is LOCAL to that block and would not appear as an output at all, which is
+  //the likely reason the original prototype's version of this was flagged unreliable
+  {
+    matrix[NewObs,NV] munew = Z * Beta; //mean responses for the new/target covariate data
+    for(n in 1:NewObs){
+      Ynew[n] = multi_normal_cholesky_rng(munew[n]', L)';
+    }
+  }
 }
