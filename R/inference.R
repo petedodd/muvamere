@@ -78,12 +78,16 @@ mvn_infer <- function(Y, X, Z = NULL,
 ##' @author Pete Dodd
 ##' @export
 mvn_extract_predictions <- function(fit) {
-  draws <- rstan::extract(fit, pars = "Ynew")$Ynew
-  if (is.null(draws) || prod(dim(draws)[-1]) == 0) {
+  ## NOTE: calling rstan::extract(fit, pars = "Ynew") directly throws
+  ## ("no parameter Ynew") rather than returning NULL when Ynew has zero
+  ## rows (NewObs=0)
+  all_draws <- rstan::extract(fit)
+  if (!("Ynew" %in% names(all_draws)) || prod(dim(all_draws$Ynew)[-1]) == 0) {
     stop("fit has no (non-empty) Ynew: was mvn_infer() called with a non-NULL Z?")
   }
-  draws # rstan::extract() already returns this correctly shaped as [draw, NewObs, NV]
+  all_draws$Ynew # rstan::extract() already returns this correctly shaped as [draw, NewObs, NV]
 }
+
 
 
 
