@@ -152,3 +152,71 @@ mvn_infer_mlm <- function(Y, X, study,
     iter = iter, ...
   )
 }
+
+
+##' MCMC sampling for data from multiple studies, with horseshoe sparsity on
+##' the global correlation structure
+##'
+##' As \code{mvn_infer_mlm()}, but the global correlation
+##' \code{Omega_global} gets a horseshoe shrinkage prior on its off-diagonal
+##' entries (promoting sparsity as the number of variates grows) instead of
+##' a plain LKJ prior. Each study's local correlation \code{Omega_local[i]}
+##' uses a plain LKJ prior.
+##'
+##' @title mvn_infer_mlm_sparse
+##' @param Y multivariate response data - each line sign/symptom values for a patient
+##' @param X multivariable explanatory data - each line a set of predictors for a patient
+##' @param study vector of which study each record belongs to
+##' @param betaM_prior_sd prior for Betas
+##' @param betaS_prior_sd prior for Betas
+##' @param tauM_prior_sd prior for tau
+##' @param tauS_prior_sd prior for tau
+##' @param lkj_local_prior_scale prior for local (per-study) correlation
+##' @param rhoA beta parameter for rho
+##' @param rhoB beta parameter for rho
+##' @param iter iterations for MCMC, default
+##' @param cores number of cores to use
+##' @param chains number of chains to use
+##' @param ...
+##' @return a Stan sample object
+##' @author Pete Dodd
+##' @export
+##' @import rstan
+mvn_infer_mlm_sparse <- function(Y, X, study,
+                                 betaM_prior_sd = 1, # prior for Betas
+                                 betaS_prior_sd = 0.5, # prior for Betas
+                                 tauM_prior_sd = 1, # prior for tau
+                                 tauS_prior_sd = 0.5, # prior for tau
+                                 lkj_local_prior_scale = 3, # prior for local cor
+                                 rhoA = 2, # beta parameter for rho
+                                 rhoB = 2, # beta parameter for rho
+                                 iter = 2e3, cores = 4, chains = 4, ...) {
+  ## prepare data
+  shdata <- list(
+    Nrecords = nrow(Y), # number of records/patients
+    Nstudies = length(unique(study)), # number of distinct studies
+    study = study, # which study does each record correspond to? [Nrecords]
+    NP = ncol(X), # number of variables
+    NV = ncol(Y), # number of variates
+    X = X, # covariate data [Nrecords,NP]
+    Y = Y, # outcomes [Nrecords,NV]
+    betaM_prior_sd = betaM_prior_sd, # prior for Betas
+    betaS_prior_sd = betaS_prior_sd, # prior for Betas
+    tauM_prior_sd = tauM_prior_sd, # prior for tau
+    tauS_prior_sd = tauS_prior_sd, # prior for tau
+    lkj_local_prior_scale = lkj_local_prior_scale, # prior for local cor
+    rhoA = rhoA, # beta parameter for rho
+    rhoB = rhoB # beta parameter for rho
+  )
+
+  ## sample
+  rstan::sampling(stanmodels$mvn_inferH_sparse,
+    data = shdata,
+    chains = chains,
+    cores = cores,
+    iter = iter, ...
+  )
+}
+
+
+
