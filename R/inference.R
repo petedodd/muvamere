@@ -91,6 +91,24 @@ mvn_extract_predictions <- function(fit) {
 
 
 
+## The hierarchical Stan models evaluate the likelihood study-by-study and need
+## records in contiguous blocks with study ids 1..Nstudies in order. Sort here so
+## callers can pass records in any order; study ids are relabelled 1..S in
+## sorted order of their original values.
+.sort_by_study <- function(Y, X, study) {
+  Y <- as.matrix(Y)
+  X <- as.matrix(X)
+  if (nrow(X) != nrow(Y) || length(study) != nrow(Y)) {
+    stop("Y, X and study must all have the same number of records")
+  }
+  o <- order(study)
+  list(
+    Y = Y[o, , drop = FALSE], X = X[o, , drop = FALSE],
+    study = as.integer(factor(study[o], levels = sort(unique(study))))
+  )
+}
+
+
 ##' MCMC sampling for data from multiple studies
 ##'
 ##' This generates a Stan sample for MVN data from a multiple studies
@@ -125,7 +143,11 @@ mvn_infer_mlm <- function(Y, X, study,
                           rhoA = 2, # beta parameter for rho
                           rhoB = 2, # beta parameter for rho
                           iter = 2e3, cores = 4, chains = 4, ...) {
-  ## prepare data
+  ## prepare data (records sorted by study, see .sort_by_study)
+  srt <- .sort_by_study(Y, X, study)
+  Y <- srt$Y
+  X <- srt$X
+  study <- srt$study
   shdata <- list(
     Nrecords = nrow(Y), # number of records/patients
     Nstudies = length(unique(study)), # number of distinct studies
@@ -152,6 +174,7 @@ mvn_infer_mlm <- function(Y, X, study,
     iter = iter, ...
   )
 }
+
 
 
 ##' MCMC sampling for data from multiple studies, with horseshoe sparsity on
@@ -191,7 +214,11 @@ mvn_infer_mlm_sparse <- function(Y, X, study,
                                  rhoA = 2, # beta parameter for rho
                                  rhoB = 2, # beta parameter for rho
                                  iter = 2e3, cores = 4, chains = 4, ...) {
-  ## prepare data
+  ## prepare data (records sorted by study, see .sort_by_study)
+  srt <- .sort_by_study(Y, X, study)
+  Y <- srt$Y
+  X <- srt$X
+  study <- srt$study
   shdata <- list(
     Nrecords = nrow(Y), # number of records/patients
     Nstudies = length(unique(study)), # number of distinct studies
