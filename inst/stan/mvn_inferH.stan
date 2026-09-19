@@ -1,3 +1,8 @@
+/* Hierarchical multivariate regression (plain LKJ on the global correlation).
+
+   The likelihood is evaluated study-by-study: L_i = cholesky(Sigs[i]) once per
+   study, then the whole study block is whitened with one triangular solve
+*/
 data{
   int Nrecords; //number of records/patients
   int Nstudies; //number of studies
@@ -16,7 +21,17 @@ data{
   real rhoB;//beta parameter for rho
 }
 transformed data{
-  
+  int ns[Nstudies] = rep_array(0, Nstudies);  //records per study
+  matrix[NP,Nrecords] Xt = X';
+  matrix[NV,Nrecords] Yt = Y';
+  for(n in 1:Nrecords){
+    if(study[n] < 1 || study[n] > Nstudies) reject("study id out of range at record ", n);
+    if(n > 1 && study[n] < study[n-1]) reject("records must be sorted by study; violated at record ", n);
+    ns[study[n]] += 1;
+  }
+  for(i in 1:Nstudies){
+    if(ns[i] == 0) reject("study ", i, " has no records (ids must be 1..Nstudies)");
+  }
 }
 parameters{
   corr_matrix[NV] Omega_local[Nstudies];  //local correlation
@@ -30,13 +45,9 @@ parameters{
   real<lower=0,upper=1> rho;              //local-global cor interpolant
 }
 transformed parameters{
-  matrix[Nrecords,NV] mu;//mean responses
   matrix[NV,NV] Sigs[Nstudies];
   for(i in 1:Nstudies){
     Sigs[i] = quad_form_diag(rho * Omega_global + (1-rho) * Omega_local[i], tau[i]);
-  }
-  for(n in 1:Nrecords){
-    mu[n] = X[n] * Betas[study[n]];
   }
 }
 model{
@@ -56,9 +67,21 @@ model{
     to_vector(Betas[i]) ~ normal(to_vector(BetaM),to_vector(BetaS));
   }
 
-  //individual-level likelihood
-  for(n in 1:Nrecords){
-    Y[n] ~ multi_normal(mu[n],Sigs[study[n]]);
+  //individual-level likelihood, one block per study
+  {
+    int pos = 1;
+    for(i in 1:Nstudies){
+      int a = pos;
+      int b = pos + ns[i] - 1;
+      matrix[NV,NV] L = cholesky_decompose(Sigs[i]);
+      //residuals for the whole block, NV x ns[i]: Y_i' - Betas[i]' * X_i'
+      matrix[NV,ns[i]] Z = mdivide_left_tri_low(L, Yt[:, a:b] - Betas[i]' * Xt[:, a:b]);
+      // = sum_n log MVN(Y_n | mu_n, L L'), including the -0.5*log(2 pi) constants
+      target += -0.5 * dot_self(to_vector(Z))
+                - ns[i] * sum(log(diagonal(L)))
+                - 0.5 * ns[i] * NV * log(2 * pi());
+      pos = b + 1;
+    }
   }
 
 }
