@@ -15,6 +15,13 @@ mvn_infer_mlm_sparse(
   lkj_local_prior_scale = 3,
   rhoA = 2,
   rhoB = 2,
+  prior = c("rhs", "horseshoe"),
+  p0 = NULL,
+  slab_scale = 0.5,
+  slab_df = 4,
+  check_starts = TRUE,
+  start_gap_tol = 0.1,
+  init = NULL,
   iter = 2000,
   cores = 4,
   chains = 4,
@@ -42,6 +49,32 @@ mvn_infer_mlm_sparse(
 
 \item{rhoB}{beta parameter for rho}
 
+\item{prior}{\code{"rhs"} (regularized horseshoe, default) or
+\code{"horseshoe"} (ordinary horseshoe, the earlier model)}
+
+\item{p0}{(\code{"rhs"} only) prior guess for the number of non-zero
+correlations among the \code{choose(ncol(Y),2)} pairs, strictly between 0
+and that number. Sets the scale of the global shrinkage parameter,
+\code{p0 / (D - p0) / sqrt(nrow(Y))}, following Piironen and Vehtari's
+recipe with \code{1/sqrt(n)} standing in for their \code{sigma/sqrt(n)} (a
+heuristic transplant). Default: 10\\% of the pairs, rounded up (5 for 10
+variates). Results were insensitive to 5 vs 30 on clustered truth.}
+
+\item{slab_scale}{(\code{"rhs"} only) scale of the Student-t slab that
+regularizes large correlations, default 0.5 (correlations lie in (-1,1))}
+
+\item{slab_df}{(\code{"rhs"} only) slab degrees of freedom, default 4}
+
+\item{check_starts}{(\code{"rhs"} only) use the last chain as an alarm
+chain, see Details. Ignored (with no check) if \code{chains < 2} or
+\code{init} is supplied.}
+
+\item{start_gap_tol}{correlation-scale threshold for the start check warning}
+
+\item{init}{optional Stan \code{init} argument. Default \code{NULL}:
+informed starts for \code{"rhs"}, Stan's random inits for
+\code{"horseshoe"}.}
+
 \item{iter}{iterations for MCMC, default}
 
 \item{cores}{number of cores to use}
@@ -49,18 +82,49 @@ mvn_infer_mlm_sparse(
 \item{chains}{number of chains to use}
 }
 \value{
-a Stan sample object
+a Stan sample object (for \code{"rhs"} with a start check, carrying an
+attribute \code{"start_check"}: a list with \code{gap}, \code{tol},
+\code{alarm_chain} and \code{agree})
 }
 \description{
-MCMC sampling for data from multiple studies, with horseshoe sparsity on
-the global correlation structure
+MCMC sampling for data from multiple studies, with sparsity-promoting
+shrinkage on the global correlation structure
 }
 \details{
 As \code{mvn_infer_mlm()}, but the global correlation
-\code{Omega_global} gets a horseshoe shrinkage prior on its off-diagonal
+\code{Omega_global} gets a shrinkage prior on its off-diagonal
 entries (promoting sparsity as the number of variates grows) instead of
 a plain LKJ prior. Each study's local correlation \code{Omega_local[i]}
 uses a plain LKJ prior.
+
+Two priors are available. \code{prior = "rhs"} (default) is the
+\emph{regularized horseshoe} of Piironen and Vehtari (2017,
+\doi{10.1214/17-EJS1337SI}) in a non-centered parametrization, with the
+regression coefficients also non-centered. At the scale of the motivating
+real-data application (10 variates, 4 studies, ~1900 records) it sampled
+about 10 times more efficiently than the ordinary horseshoe, and recovered
+sparse, clustered and dense true correlation structures. It needs valid
+initial values (Stan's random defaults fail) and this function supplies
+them. \code{prior = "horseshoe"} is the earlier ordinary (centered)
+horseshoe model, kept as an alternative: it samples poorly when the true
+correlations are very sparse at 10 variates, but handled a dense truth well.
+
+\strong{Start check.} With \code{prior = "rhs"}, \code{chains >= 2},
+\code{check_starts = TRUE} and no user \code{init}, all chains but the last
+start from data-informed values (pooled within-study residual correlation)
+while the last chain starts from a deliberately sparse point. If the true
+correlations are dense, a chain started sparse can fall into a spurious
+all-zero mode (with reassuring \code{Rhat} if \emph{all} chains do so). If the
+last chain's posterior-mean \code{Omega_global} differs from the others' by
+more than \code{start_gap_tol} a warning is issued; in that case treat the
+fit as unreliable (or refit with \code{check_starts = FALSE} to use
+informed starts only). The result is stored in the \code{"start_check"}
+attribute of the returned fit.
+}
+\references{
+Piironen J, Vehtari A (2017). Sparsity information and
+regularization in the horseshoe and other shrinkage priors. Electronic
+Journal of Statistics 11(2):5018-5051. \doi{10.1214/17-EJS1337SI}
 }
 \author{
 Pete Dodd

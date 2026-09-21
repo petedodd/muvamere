@@ -66,6 +66,8 @@ model{
     Omega_local[i] ~ lkj_corr(lkj_local_prior_scale);
     to_vector(Betas[i]) ~ normal(to_vector(BetaM),to_vector(BetaS));
   }
+  //tau[i] ~ normal(taum,sigt) is truncated at 0 (tau has lower=0); its normaliser depends on taum, sigt
+  target += -Nstudies * sum(log(Phi(taum ./ sigt)));
 
   //individual-level likelihood, one block per study
   {
