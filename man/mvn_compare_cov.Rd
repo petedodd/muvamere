@@ -9,7 +9,8 @@ mvn_compare_cov(true_Sigma, est_Sigma)
 \arguments{
 \item{true_Sigma}{true covariance/correlation matrix}
 
-\item{est_Sigma}{estimated/simulated covariance/correlation matrix, same dimensions as \code{true_Sigma}}
+\item{est_Sigma}{estimated/simulated covariance/correlation matrix, same
+dimensions as \code{true_Sigma}}
 }
 \value{
 a data frame with columns \code{true}, \code{est}, and \code{rmse}
@@ -17,12 +18,13 @@ a data frame with columns \code{true}, \code{est}, and \code{rmse}
 on every row for easy access via \code{result$rmse[1]})
 }
 \description{
-Compare a true covariance/correlation matrix against an estimated or simulated one
+Compare a true covariance/correlation matrix against an estimated or
+simulated one
 }
 \details{
 A simple RMSE-based comparison over the upper triangle (including the
-diagonal) of two same-shaped matrices, e.g. for comparing \code{mvn_infer()}'s
-fitted \code{Sigma} against known simulation truth.
+diagonal) of two same-shaped matrices, e.g. for comparing
+\code{mvn_infer()}'s fitted \code{Sigma} against known simulation truth.
 }
 \author{
 Pete Dodd

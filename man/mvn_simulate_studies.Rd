@@ -23,9 +23,11 @@ mvn_simulate_studies(
 
 \item{sigb}{matrix global regression parameters SD}
 
-\item{rhoA}{beta prior parameter for interpolant between local and global correlations}
+\item{rhoA}{beta prior parameter for interpolant between local and global
+correlations}
 
-\item{rhoB}{beta prior parameter for interpolant between local and global correlations}
+\item{rhoB}{beta prior parameter for interpolant between local and global
+correlations}
 
 \item{taug}{global tau mean(s)}
 
@@ -36,13 +38,15 @@ mvn_simulate_studies(
 \item{lkj_global}{global correlation LKJ prior parameter}
 }
 \value{
-a data frame with responses for all studies, with studyno and obsno columns appended
+a data frame with responses for all studies, with studyno and obsno
+columns appended
 }
 \description{
 Simulate responses for a number of studies
 }
 \details{
-Given a list of covariate data inputs, a corresponding set of responses is generated.
+Given a list of covariate data inputs, a corresponding set of responses is
+generated.
 }
 \author{
 Pete Dodd

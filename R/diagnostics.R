@@ -16,15 +16,19 @@
 ##' excluded (\code{na.rm = TRUE}) rather than counted as failures.
 ##'
 ##' @title mvn_diagnose
-##' @param fit a stanfit object, e.g. from \code{mvn_infer()}/\code{mvn_infer_mlm()}
-##' @param rhat_threshold flag as a problem if the max (non-NA) Rhat exceeds this, default 1.01
-##' @param ess_ratio_threshold flag as a problem if the min (non-NA) effective sample size,
-##'   as a fraction of total post-warmup draws, falls below this, default 0.1
-##' @param bfmi_threshold flag as a problem if any chain's E-BFMI falls below this, default 0.2
-##' @return an object of class \code{muvamere_diagnostics} (a list) with elements
-##'   \code{rhat_max}, \code{ess_min}, \code{ess_min_ratio}, \code{n_divergent},
-##'   \code{n_max_treedepth}, \code{bfmi_min}, \code{n_draws}, and \code{ok}
-##'   (TRUE only if every check passes)
+##' @param fit a stanfit object, e.g. from
+##'   \code{mvn_infer()}/\code{mvn_infer_mlm()}
+##' @param rhat_threshold flag as a problem if the max (non-NA) Rhat exceeds
+##'   this, default 1.01
+##' @param ess_ratio_threshold flag as a problem if the min (non-NA) effective
+##'   sample size, as a fraction of total post-warmup draws, falls below this,
+##'   default 0.1
+##' @param bfmi_threshold flag as a problem if any chain's E-BFMI falls below
+##'   this, default 0.2
+##' @return an object of class \code{muvamere_diagnostics} (a list) with
+##'   elements \code{rhat_max}, \code{ess_min}, \code{ess_min_ratio},
+##'   \code{n_divergent}, \code{n_max_treedepth}, \code{bfmi_min},
+##'   \code{n_draws}, and \code{ok} (TRUE only if every check passes)
 ##' @author Pete Dodd
 ##' @export
 mvn_diagnose <- function(fit, rhat_threshold = 1.01, ess_ratio_threshold = 0.1,

@@ -15,10 +15,11 @@ mvn_infer_mlm_sparse(
   lkj_local_prior_scale = 3,
   rhoA = 2,
   rhoB = 2,
-  prior = c("rhs", "horseshoe"),
+  prior = c("rhs_kappa", "rhs", "horseshoe"),
   p0 = NULL,
   slab_scale = 0.5,
   slab_df = 4,
+  kappa_prior_scale = 2,
   check_starts = TRUE,
   start_gap_tol = 0.1,
   auto_refit = TRUE,
@@ -30,9 +31,11 @@ mvn_infer_mlm_sparse(
 )
 }
 \arguments{
-\item{Y}{multivariate response data - each line sign/symptom values for a patient}
+\item{Y}{multivariate response data - each line sign/symptom values for a
+patient}
 
-\item{X}{multivariable explanatory data - each line a set of predictors for a patient}
+\item{X}{multivariable explanatory data - each line a set of predictors for
+a patient}
 
 \item{study}{vector of which study each record belongs to}
 
@@ -50,27 +53,39 @@ mvn_infer_mlm_sparse(
 
 \item{rhoB}{beta parameter for rho}
 
-\item{prior}{\code{"rhs"} (regularized horseshoe, default) or
-\code{"horseshoe"} (ordinary horseshoe, the earlier model)}
+\item{prior}{\code{"rhs_kappa"} (deviation-penalty model, the default:
+see Details for why), \code{"rhs"} (regularized horseshoe with the
+earlier rho-blend local layer, kept for comparison), or
+\code{"horseshoe"} (ordinary horseshoe, the earliest model)}
 
-\item{p0}{(\code{"rhs"} only) prior guess for the number of non-zero
-correlations among the \code{choose(ncol(Y),2)} pairs, strictly between 0
-and that number. Sets the scale of the global shrinkage parameter,
-\code{p0 / (D - p0) / sqrt(nrow(Y))}, following Piironen and Vehtari's
-recipe with \code{1/sqrt(n)} standing in for their \code{sigma/sqrt(n)} (a
-heuristic transplant). Default: 10\\% of the pairs, rounded up (5 for 10
-variates). Results were insensitive to 5 vs 30 on clustered truth.}
+\item{p0}{(\code{"rhs"}/\code{"rhs_kappa"}) prior guess for the number of
+non-zero correlations among the \code{choose(ncol(Y),2)} pairs, strictly
+between 0 and that number. Sets the scale of the global shrinkage
+parameter, \code{p0 / (D - p0) / sqrt(nrow(Y))}, following Piironen and
+Vehtari's recipe with \code{1/sqrt(n)} standing in for their
+\code{sigma/sqrt(n)} (a heuristic transplant). Default: 10\\% of the
+pairs, rounded up (5 for 10 variates). Results were insensitive to 5 vs
+30 on clustered truth.}
 
-\item{slab_scale}{(\code{"rhs"} only) scale of the Student-t slab that
-regularizes large correlations, default 0.5 (correlations lie in (-1,1))}
+\item{slab_scale}{(\code{"rhs"}/\code{"rhs_kappa"}) scale of the
+Student-t slab that regularizes large correlations, default 0.5
+(correlations lie in (-1,1))}
 
-\item{slab_df}{(\code{"rhs"} only) slab degrees of freedom, default 4}
+\item{slab_df}{(\code{"rhs"}/\code{"rhs_kappa"}) slab degrees of freedom,
+default 4}
+
+\item{kappa_prior_scale}{(\code{"rhs_kappa"} only) scale of the
+half-normal prior on \code{kappa}, the shared strength of each study's
+correlation deviation from \code{Omega_global}. Default 2 (used
+throughout validation; not otherwise tuned).}
 
 \item{check_starts}{(\code{"rhs"} only) use the last chain as an alarm
 chain, see Details. Ignored (with no check) if \code{chains < 2} or
-\code{init} is supplied.}
+\code{init} is supplied. Not used for \code{"rhs_kappa"}, which did not
+need it in testing (see Details).}
 
-\item{start_gap_tol}{correlation-scale threshold for the start check warning}
+\item{start_gap_tol}{correlation-scale threshold for the start check
+warning}
 
 \item{auto_refit}{(\code{"rhs"} only, and only when \code{check_starts}
 fires) automatically resample with informed-only starts (roughly
@@ -78,8 +93,8 @@ doubling the wall time of a failing fit) rather than just warning and
 returning the disagreeing fit. Default \code{TRUE}.}
 
 \item{init}{optional Stan \code{init} argument. Default \code{NULL}:
-informed starts for \code{"rhs"}, Stan's random inits for
-\code{"horseshoe"}.}
+informed starts for \code{"rhs"}/\code{"rhs_kappa"}, Stan's random
+inits for \code{"horseshoe"}.}
 
 \item{iter}{iterations for MCMC, default}
 
@@ -88,10 +103,12 @@ informed starts for \code{"rhs"}, Stan's random inits for
 \item{chains}{number of chains to use}
 }
 \value{
-a Stan sample object (for \code{"rhs"} with a start check, carrying an
-attribute \code{"start_check"}: a list with \code{gap}, \code{tol},
+a Stan sample object, always carrying an attribute
+\code{"diagnose"} (the \code{mvn_diagnose()} result for this fit; see
+Details) and, for \code{"rhs"} with a start check, also an attribute
+\code{"start_check"}: a list with \code{gap}, \code{tol},
 \code{alarm_chain}, \code{agree} and \code{refit} (whether an automatic
-refit happened))
+refit happened)
 }
 \description{
 MCMC sampling for data from multiple studies, with sparsity-promoting
@@ -104,33 +121,66 @@ entries (promoting sparsity as the number of variates grows) instead of
 a plain LKJ prior. Each study's local correlation \code{Omega_local[i]}
 uses a plain LKJ prior.
 
-Two priors are available. \code{prior = "rhs"} (default) is the
+Three priors are available. \code{prior = "rhs_kappa"} (the
+\strong{default}, see below) is a deviation-penalty model that replaces
+both \code{rho} and \code{Omega_local[i]}'s free per-study prior with a
+single, non-centered, estimated deviation strength \code{kappa}, so that
+each study's correlation is \code{Omega_global + kappa*eta[i]}
+(\code{eta[i]} standard normal, rejection-sampled for positive
+definiteness) rather than a free blend. \code{prior = "rhs"} (the
+earlier default, kept for comparison/compatibility) is the
 \emph{regularized horseshoe} of Piironen and Vehtari (2017,
 \doi{10.1214/17-EJS1337SI}) in a non-centered parametrization, with the
-regression coefficients also non-centered. At the scale of the motivating
-real-data application (10 variates, 4 studies, ~1900 records) it sampled
-about 10 times more efficiently than the ordinary horseshoe, and recovered
-sparse, clustered and dense true correlation structures. It needs valid
-initial values (Stan's random defaults fail) and this function supplies
-them. \code{prior = "horseshoe"} is the earlier ordinary (centered)
-horseshoe model, kept as an alternative: it samples poorly when the true
-correlations are very sparse at 10 variates, but handled a dense truth well.
+regression coefficients also non-centered, blended with each study's own
+free local correlation via \code{rho}. \code{prior = "horseshoe"} is the
+earlier ordinary (centered) horseshoe model, kept as a further
+alternative.
 
-\strong{Start check.} With \code{prior = "rhs"}, \code{chains >= 2},
+\strong{Why \code{"rhs_kappa"} is the default.} The \code{"rhs"} model's
+\code{rho}-blend has a genuine non-identifiability: because
+\code{Omega_local[i]} is a free per-study correlation matrix, for any
+\code{rho} and \code{Omega_global} there is a valid \code{Omega_local[i]}
+that reproduces study i's data exactly, at zero prior cost. This creates a
+second posterior mode where \code{Omega_global} collapses toward zero
+(favoured by the horseshoe) with the true correlation "absorbed"
+independently into each \code{Omega_local[i]} and \code{rho} left
+unidentified near its prior mean. This fits studies well but affects
+exactly what \code{mvn_generate_AP()} uses to simulate an
+\emph{unobserved} cohort (see \code{mvn_extract_hyperparams()}).
+\code{"rhs_kappa"} recovered \code{Omega_global} 3-4x more accurately and
+sampled cleanly every time, while \code{"rhs"} was badly unstable.
+
+All three priors need valid initial values (Stan's random defaults fail
+for \code{"rhs"} and \code{"rhs_kappa"}, whose \code{Omega_global} is
+built by hand and rejected if not positive definite) and this function
+supplies them.
+
+\strong{Severe-instability check (all priors).} Every returned fit is
+passed through \code{mvn_diagnose()}; the result is stored in
+\code{attr(fit, "diagnose")}, and a warning is issued if sampling looks
+severely unstable (\eqn{\hat R>1.5}, ESS\eqn{{}<5}, or more than 20\\% of
+draws divergent). This is deliberately independent of, and looser than,
+the \code{"rhs"}-only start check below: that check can only ever compare
+chains to \emph{each other}, and was found
+\code{"rhs_kappa"} validation above) to pass silently when two chains
+agreed with each other while \emph{both} were badly mixing.
+
+\strong{Start check (\code{prior = "rhs"} only).} With \code{chains >= 2},
 \code{check_starts = TRUE} and no user \code{init}, all chains but the last
 start from data-informed values (pooled within-study residual correlation)
 while the last chain starts from a deliberately sparse point. If the true
 correlations are dense, a chain started sparse can fall into a spurious
-all-zero mode (with reassuring \code{Rhat} if \emph{all} chains do so). If the
-last chain's posterior-mean \code{Omega_global} differs from the others' by
-more than \code{start_gap_tol}, and \code{auto_refit = TRUE} (the default),
-the model is automatically resampled with every chain started from the
-informed point and a warning names both the original disagreement and the
-fact that a refit happened (this refit has no alarm chain of its own, so it
-is not itself protected against the same failure: see \code{auto_refit}).
-With \code{auto_refit = FALSE} the original (disagreeing) fit is returned
-with a warning instead. The check's outcome is stored in the
-\code{"start_check"} attribute of the returned fit either way.
+all-zero mode (with reassuring \code{Rhat} if \emph{all} chains do so). If
+the last chain's posterior-mean \code{Omega_global} differs from the
+others' by more than \code{start_gap_tol}, and \code{auto_refit = TRUE}
+(the default), the model is automatically resampled with every chain
+started from the informed point and a warning names both the original
+disagreement and the fact that a refit happened (this refit has no alarm
+chain of its own, so it is not itself protected against the same failure:
+see \code{auto_refit}). With \code{auto_refit = FALSE} the original
+(disagreeing) fit is returned with a warning instead. The check's outcome
+is stored in the \code{"start_check"} attribute of the returned fit either
+way.
 }
 \references{
 Piironen J, Vehtari A (2017). Sparsity information and

@@ -5,13 +5,16 @@
 ##' This generates a Stan sample for MVN data from a single study
 ##'
 ##' @title mvn_infer
-##' @param Y multivariate response data - each line sign/symptom values for a patient
-##' @param X multivariable explanatory data - each line a set of predictors for a patient
-##' @param Z optional new covariate data to predict/simulate Y for (NP columns, same as X;
-##'   any number of rows). If supplied, the returned stanfit also carries a generated
-##'   quantity `Ynew` (NewObs x NV) with one posterior-predictive draw of Y per MCMC
-##'   iteration for each row of Z - extract with \code{mvn_extract_predictions()}.
-##'   Default NULL fits the model with no prediction (NewObs=0).
+##' @param Y multivariate response data - each line sign/symptom values for a
+##'   patient
+##' @param X multivariable explanatory data - each line a set of predictors for
+##'   a patient
+##' @param Z optional new covariate data to predict/simulate Y for (NP columns,
+##'   same as X; any number of rows). If supplied, the returned stanfit also
+##'   carries a generated quantity `Ynew` (NewObs x NV) with one
+##'   posterior-predictive draw of Y per MCMC iteration for each row of Z -
+##'   extract with \code{mvn_extract_predictions()}. Default NULL fits the
+##'   model with no prediction (NewObs=0).
 ##' @param beta_prior_sd prior for Betas, default=5
 ##' @param tau_prior_sd = 2.5,
 ##' @param prior for tau Cauchy scale in correlations, default=2.5
@@ -64,17 +67,21 @@ mvn_infer <- function(Y, X, Z = NULL,
 
 
 
-##' Extract posterior-predictive draws for new covariate data from a mvn_infer() fit
+##' Extract posterior-predictive draws for new covariate data from a
+##' mvn_infer() fit
 ##'
-##' Pulls the \code{Ynew} generated quantity (populated only if \code{mvn_infer()} was
-##' called with a non-NULL \code{Z}) out of a stanfit and reshapes it into a proper
-##' 3-D array indexed [draw, new observation, variate], rather than leaving the caller
-##' to reshape rstan's flattened, row-major summary output by hand (see the row-major
-##' reshape note in \code{mvn_extract_hyperparams()}/the package TODO list).
+##' Pulls the \code{Ynew} generated quantity (populated only if
+##' \code{mvn_infer()} was called with a non-NULL \code{Z}) out of a stanfit
+##' and reshapes it into a proper 3-D array indexed \[draw, new observation,
+##' variate\], rather than leaving the caller to reshape rstan's flattened,
+##' row-major summary output by hand (see the row-major reshape note in
+##' \code{mvn_extract_hyperparams()}/the package TODO list).
 ##'
 ##' @title mvn_extract_predictions
-##' @param fit a stanfit object returned by \code{mvn_infer()}, called with non-NULL Z
-##' @return a 3-D array [ndraws, NewObs, NV] of posterior-predictive draws of Ynew
+##' @param fit a stanfit object returned by \code{mvn_infer()}, called with
+##'   non-NULL Z
+##' @return a 3-D array \[ndraws, NewObs, NV\] of posterior-predictive draws of
+##'   Ynew
 ##' @author Pete Dodd
 ##' @export
 mvn_extract_predictions <- function(fit) {
@@ -116,8 +123,10 @@ mvn_extract_predictions <- function(fit) {
 ##' This generates a Stan sample for MVN data from a multiple studies
 ##'
 ##' @title mvn_infer_mlm
-##' @param Y multivariate response data - each line sign/symptom values for a patient
-##' @param X multivariable explanatory data - each line a set of predictors for a patient
+##' @param Y multivariate response data - each line sign/symptom values for a
+##'   patient
+##' @param X multivariable explanatory data - each line a set of predictors for
+##'   a patient
 ##' @param study vector of which study each record belongs to
 ##' @param betaM_prior_sd prior for Betas
 ##' @param betaS_prior_sd prior for Betas
@@ -169,17 +178,18 @@ mvn_infer_mlm <- function(Y, X, study,
   )
 
   ## sample
-  rstan::sampling(stanmodels$mvn_inferH,
+  fit <- rstan::sampling(stanmodels$mvn_inferH,
     data = shdata,
     chains = chains,
     cores = cores,
     iter = iter, ...
   )
+  .attach_stability_check(fit, "")
 }
 
 
 
-## ---- helpers for the regularized-horseshoe sparse model ----------------------------------
+## ---- helpers for the regularized-horseshoe sparse model ----------------
 
 ## default prior guess for the number of non-zero correlations: 10% of the D_R = choose(NV,2)
 ## pairs, rounded up, but always strictly below D_R (needed by the Stan model)
@@ -211,7 +221,7 @@ mvn_infer_mlm <- function(Y, X, study,
 ## Omega_global(init) positive definite, so Stan's default random inits (T ~ 1) fail.
 ##   informed : Omega_global = 0.9 * pooled residual correlation (positive definite whenever r is,
 ##              unit diagonal), T = 0.3, lam = 1, slab multiplier caux = 1, jittered by N(0, 0.01^2) in z
-##   sparse   : T = 0.01, z ~ N(0,1) -- used ONLY as the alarm start (see check_starts): on a dense
+##   sparse   : T = 0.01, z ~ N(0,1) - used only as the alarm start (see check_starts): on a dense
 ##              truth chains started here can fall into a spurious all-zero mode, which is exactly
 ##              what disagreement with the informed chains reveals.
 ## Returns a list of length `chains`; the last chain is the alarm chain if `alarm` is TRUE.
@@ -245,6 +255,53 @@ mvn_infer_mlm <- function(Y, X, study,
   max(abs(m[, alarm_chain] - others))
 }
 
+## Initial values for mvn_inferH_sparse_kappa.stan (the deviation-penalty model): informed
+## Omega_global start as in .rhs_inits, plus eta = 0 for every study (valid regardless of kappa,
+## since Omega_s = Omega_global + kappa*0 = Omega_global, already positive definite) and kappa = 1.
+## Unlike .rhs_inits there is no "alarm" variant as this was found empirically unnessary.
+.rhs_kappa_inits <- function(Y, X, study, chains, slab_scale) {
+  NV <- ncol(Y)
+  DR <- choose(NV, 2)
+  r <- .pooled_resid_cor(Y, X, study)
+  S <- length(unique(study))
+  T0 <- 0.3
+  c0 <- slab_scale * sqrt(1) # caux = 1
+  lt0 <- c0 / sqrt(c0^2 + T0^2) # lam_tilde at lam = 1
+  z_inf <- 0.9 * r[.upper_idx(NV)] / (T0 * lt0)
+  lapply(seq_len(chains), function(ch) {
+    list(
+      zg = z_inf + stats::rnorm(DR, 0, 0.01), T = T0, lam = rep(1, DR), caux = 1,
+      eta = matrix(0, S, DR), kappa = 1 # eta as a plain matrix, not a list of vectors
+    )
+  })
+}
+
+## Severe-instability check applied uniformly after every mvn_infer_mlm()/mvn_infer_mlm_sparse()
+## fit (any prior), regardless of any start-agreement check. For case where chains agree but mix badly.
+.severely_unstable <- function(diag, div_frac_threshold = 0.2) {
+  (is.finite(diag$rhat_max) && diag$rhat_max > 1.5) ||
+    (is.finite(diag$ess_min) && diag$ess_min < 5) ||
+    (diag$n_divergent / diag$n_draws > div_frac_threshold)
+}
+
+## Runs mvn_diagnose() on `fit`, attaches it as attr(fit, "diagnose"), and warns
+.attach_stability_check <- function(fit, context) {
+  diag <- mvn_diagnose(fit)
+  attr(fit, "diagnose") <- diag
+  if (.severely_unstable(diag)) {
+    warning(
+      "severe sampling instability in the returned fit", context, ": Rhat max ",
+      signif(diag$rhat_max, 4), ", ESS min ", signif(diag$ess_min, 4), ", ",
+      diag$n_divergent, "/", diag$n_draws, " divergent transitions. ",
+      "This is independent of, and not caught by, any start-agreement check: ",
+      "two chains can agree with each other while both mixing badly. Treat this fit as ",
+      "unreliable; see attr(fit, \"diagnose\") for the full mvn_diagnose() output.",
+      call. = FALSE
+    )
+  }
+  fit
+}
+
 
 ##' MCMC sampling for data from multiple studies, with sparsity-promoting
 ##' shrinkage on the global correlation structure
@@ -255,37 +312,72 @@ mvn_infer_mlm <- function(Y, X, study,
 ##' a plain LKJ prior. Each study's local correlation \code{Omega_local[i]}
 ##' uses a plain LKJ prior.
 ##'
-##' Two priors are available. \code{prior = "rhs"} (default) is the
+##' Three priors are available. \code{prior = "rhs_kappa"} (the
+##' \strong{default}, see below) is a deviation-penalty model that replaces
+##' both \code{rho} and \code{Omega_local[i]}'s free per-study prior with a
+##' single, non-centered, estimated deviation strength \code{kappa}, so that
+##' each study's correlation is \code{Omega_global + kappa*eta[i]}
+##' (\code{eta[i]} standard normal, rejection-sampled for positive
+##' definiteness) rather than a free blend. \code{prior = "rhs"} (the
+##' earlier default, kept for comparison/compatibility) is the
 ##' \emph{regularized horseshoe} of Piironen and Vehtari (2017,
 ##' \doi{10.1214/17-EJS1337SI}) in a non-centered parametrization, with the
-##' regression coefficients also non-centered. At the scale of the motivating
-##' real-data application (10 variates, 4 studies, ~1900 records) it sampled
-##' about 10 times more efficiently than the ordinary horseshoe, and recovered
-##' sparse, clustered and dense true correlation structures. It needs valid
-##' initial values (Stan's random defaults fail) and this function supplies
-##' them. \code{prior = "horseshoe"} is the earlier ordinary (centered)
-##' horseshoe model, kept as an alternative: it samples poorly when the true
-##' correlations are very sparse at 10 variates, but handled a dense truth well.
+##' regression coefficients also non-centered, blended with each study's own
+##' free local correlation via \code{rho}. \code{prior = "horseshoe"} is the
+##' earlier ordinary (centered) horseshoe model, kept as a further
+##' alternative.
 ##'
-##' \strong{Start check.} With \code{prior = "rhs"}, \code{chains >= 2},
+##' \strong{Why \code{"rhs_kappa"} is the default.} The \code{"rhs"} model's
+##' \code{rho}-blend has a genuine non-identifiability: because
+##' \code{Omega_local[i]} is a free per-study correlation matrix, for any
+##' \code{rho} and \code{Omega_global} there is a valid \code{Omega_local[i]}
+##' that reproduces study i's data exactly, at zero prior cost. This creates a
+##' second posterior mode where \code{Omega_global} collapses toward zero
+##' (favoured by the horseshoe) with the true correlation "absorbed"
+##' independently into each \code{Omega_local[i]} and \code{rho} left
+##' unidentified near its prior mean. This fits studies well but affects
+##' exactly what \code{mvn_generate_AP()} uses to simulate an
+##' \emph{unobserved} cohort (see \code{mvn_extract_hyperparams()}).
+##' \code{"rhs_kappa"} recovered \code{Omega_global} 3-4x more accurately and
+##' sampled cleanly every time, while \code{"rhs"} was badly unstable.
+##'
+##' All three priors need valid initial values (Stan's random defaults fail
+##' for \code{"rhs"} and \code{"rhs_kappa"}, whose \code{Omega_global} is
+##' built by hand and rejected if not positive definite) and this function
+##' supplies them.
+##'
+##' \strong{Severe-instability check (all priors).} Every returned fit is
+##' passed through \code{mvn_diagnose()}; the result is stored in
+##' \code{attr(fit, "diagnose")}, and a warning is issued if sampling looks
+##' severely unstable (\eqn{\hat R>1.5}, ESS\eqn{{}<5}, or more than 20\% of
+##' draws divergent). This is deliberately independent of, and looser than,
+##' the \code{"rhs"}-only start check below: that check can only ever compare
+##' chains to \emph{each other}, and was found
+##' \code{"rhs_kappa"} validation above) to pass silently when two chains
+##' agreed with each other while \emph{both} were badly mixing.
+##'
+##' \strong{Start check (\code{prior = "rhs"} only).} With \code{chains >= 2},
 ##' \code{check_starts = TRUE} and no user \code{init}, all chains but the last
 ##' start from data-informed values (pooled within-study residual correlation)
 ##' while the last chain starts from a deliberately sparse point. If the true
 ##' correlations are dense, a chain started sparse can fall into a spurious
-##' all-zero mode (with reassuring \code{Rhat} if \emph{all} chains do so). If the
-##' last chain's posterior-mean \code{Omega_global} differs from the others' by
-##' more than \code{start_gap_tol}, and \code{auto_refit = TRUE} (the default),
-##' the model is automatically resampled with every chain started from the
-##' informed point and a warning names both the original disagreement and the
-##' fact that a refit happened (this refit has no alarm chain of its own, so it
-##' is not itself protected against the same failure: see \code{auto_refit}).
-##' With \code{auto_refit = FALSE} the original (disagreeing) fit is returned
-##' with a warning instead. The check's outcome is stored in the
-##' \code{"start_check"} attribute of the returned fit either way.
+##' all-zero mode (with reassuring \code{Rhat} if \emph{all} chains do so). If
+##' the last chain's posterior-mean \code{Omega_global} differs from the
+##' others' by more than \code{start_gap_tol}, and \code{auto_refit = TRUE}
+##' (the default), the model is automatically resampled with every chain
+##' started from the informed point and a warning names both the original
+##' disagreement and the fact that a refit happened (this refit has no alarm
+##' chain of its own, so it is not itself protected against the same failure:
+##' see \code{auto_refit}). With \code{auto_refit = FALSE} the original
+##' (disagreeing) fit is returned with a warning instead. The check's outcome
+##' is stored in the \code{"start_check"} attribute of the returned fit either
+##' way.
 ##'
 ##' @title mvn_infer_mlm_sparse
-##' @param Y multivariate response data - each line sign/symptom values for a patient
-##' @param X multivariable explanatory data - each line a set of predictors for a patient
+##' @param Y multivariate response data - each line sign/symptom values for a
+##'   patient
+##' @param X multivariable explanatory data - each line a set of predictors for
+##'   a patient
 ##' @param study vector of which study each record belongs to
 ##' @param betaM_prior_sd prior for Betas
 ##' @param betaS_prior_sd prior for Betas
@@ -294,37 +386,50 @@ mvn_infer_mlm <- function(Y, X, study,
 ##' @param lkj_local_prior_scale prior for local (per-study) correlation
 ##' @param rhoA beta parameter for rho
 ##' @param rhoB beta parameter for rho
-##' @param prior \code{"rhs"} (regularized horseshoe, default) or
-##'   \code{"horseshoe"} (ordinary horseshoe, the earlier model)
-##' @param p0 (\code{"rhs"} only) prior guess for the number of non-zero
-##'   correlations among the \code{choose(ncol(Y),2)} pairs, strictly between 0
-##'   and that number. Sets the scale of the global shrinkage parameter,
-##'   \code{p0 / (D - p0) / sqrt(nrow(Y))}, following Piironen and Vehtari's
-##'   recipe with \code{1/sqrt(n)} standing in for their \code{sigma/sqrt(n)} (a
-##'   heuristic transplant). Default: 10\% of the pairs, rounded up (5 for 10
-##'   variates). Results were insensitive to 5 vs 30 on clustered truth.
-##' @param slab_scale (\code{"rhs"} only) scale of the Student-t slab that
-##'   regularizes large correlations, default 0.5 (correlations lie in (-1,1))
-##' @param slab_df (\code{"rhs"} only) slab degrees of freedom, default 4
+##' @param prior \code{"rhs_kappa"} (deviation-penalty model, the default:
+##'   see Details for why), \code{"rhs"} (regularized horseshoe with the
+##'   earlier rho-blend local layer, kept for comparison), or
+##'   \code{"horseshoe"} (ordinary horseshoe, the earliest model)
+##' @param p0 (\code{"rhs"}/\code{"rhs_kappa"}) prior guess for the number of
+##'   non-zero correlations among the \code{choose(ncol(Y),2)} pairs, strictly
+##'   between 0 and that number. Sets the scale of the global shrinkage
+##'   parameter, \code{p0 / (D - p0) / sqrt(nrow(Y))}, following Piironen and
+##'   Vehtari's recipe with \code{1/sqrt(n)} standing in for their
+##'   \code{sigma/sqrt(n)} (a heuristic transplant). Default: 10\% of the
+##'   pairs, rounded up (5 for 10 variates). Results were insensitive to 5 vs
+##'   30 on clustered truth.
+##' @param slab_scale (\code{"rhs"}/\code{"rhs_kappa"}) scale of the
+##'   Student-t slab that regularizes large correlations, default 0.5
+##'   (correlations lie in (-1,1))
+##' @param slab_df (\code{"rhs"}/\code{"rhs_kappa"}) slab degrees of freedom,
+##'   default 4
+##' @param kappa_prior_scale (\code{"rhs_kappa"} only) scale of the
+##'   half-normal prior on \code{kappa}, the shared strength of each study's
+##'   correlation deviation from \code{Omega_global}. Default 2 (used
+##'   throughout validation; not otherwise tuned).
 ##' @param check_starts (\code{"rhs"} only) use the last chain as an alarm
 ##'   chain, see Details. Ignored (with no check) if \code{chains < 2} or
-##'   \code{init} is supplied.
-##' @param start_gap_tol correlation-scale threshold for the start check warning
+##'   \code{init} is supplied. Not used for \code{"rhs_kappa"}, which did not
+##'   need it in testing (see Details).
+##' @param start_gap_tol correlation-scale threshold for the start check
+##'   warning
 ##' @param auto_refit (\code{"rhs"} only, and only when \code{check_starts}
 ##'   fires) automatically resample with informed-only starts (roughly
 ##'   doubling the wall time of a failing fit) rather than just warning and
 ##'   returning the disagreeing fit. Default \code{TRUE}.
 ##' @param init optional Stan \code{init} argument. Default \code{NULL}:
-##'   informed starts for \code{"rhs"}, Stan's random inits for
-##'   \code{"horseshoe"}.
+##'   informed starts for \code{"rhs"}/\code{"rhs_kappa"}, Stan's random
+##'   inits for \code{"horseshoe"}.
 ##' @param iter iterations for MCMC, default
 ##' @param cores number of cores to use
 ##' @param chains number of chains to use
 ##' @param ...
-##' @return a Stan sample object (for \code{"rhs"} with a start check, carrying an
-##'   attribute \code{"start_check"}: a list with \code{gap}, \code{tol},
+##' @return a Stan sample object, always carrying an attribute
+##'   \code{"diagnose"} (the \code{mvn_diagnose()} result for this fit; see
+##'   Details) and, for \code{"rhs"} with a start check, also an attribute
+##'   \code{"start_check"}: a list with \code{gap}, \code{tol},
 ##'   \code{alarm_chain}, \code{agree} and \code{refit} (whether an automatic
-##'   refit happened))
+##'   refit happened)
 ##' @author Pete Dodd
 ##' @references Piironen J, Vehtari A (2017). Sparsity information and
 ##'   regularization in the horseshoe and other shrinkage priors. Electronic
@@ -339,8 +444,9 @@ mvn_infer_mlm_sparse <- function(Y, X, study,
                                  lkj_local_prior_scale = 3, # prior for local cor
                                  rhoA = 2, # beta parameter for rho
                                  rhoB = 2, # beta parameter for rho
-                                 prior = c("rhs", "horseshoe"),
+                                 prior = c("rhs_kappa", "rhs", "horseshoe"),
                                  p0 = NULL, slab_scale = 0.5, slab_df = 4,
+                                 kappa_prior_scale = 2,
                                  check_starts = TRUE, start_gap_tol = 0.1,
                                  auto_refit = TRUE,
                                  init = NULL,
@@ -375,7 +481,38 @@ mvn_infer_mlm_sparse <- function(Y, X, study,
       chains = chains, cores = cores, iter = iter
     )
     if (!is.null(init)) args$init <- init
-    return(do.call(rstan::sampling, c(args, list(...))))
+    fit <- do.call(rstan::sampling, c(args, list(...)))
+    return(.attach_stability_check(fit, ""))
+  }
+
+  if (prior == "rhs_kappa") {
+    DR <- choose(ncol(Y), 2)
+    if (is.null(p0)) p0 <- .default_p0(ncol(Y))
+    if (!(is.numeric(p0) && length(p0) == 1 && p0 > 0 && p0 < DR)) {
+      stop("p0 must be a single number with 0 < p0 < choose(ncol(Y), 2) = ", DR)
+    }
+    if (!(slab_scale > 0 && slab_df > 0)) stop("slab_scale and slab_df must be positive")
+    if (!(is.numeric(kappa_prior_scale) && length(kappa_prior_scale) == 1 && kappa_prior_scale > 0)) {
+      stop("kappa_prior_scale must be a single positive number")
+    }
+    ## no rhoA/rhoB/lkj_local_prior_scale for this model: no rho-blend or per-study
+    ## LKJ prior to parametrise (see the deviation-penalty design in Details)
+    shdata$rhoA <- NULL
+    shdata$rhoB <- NULL
+    shdata$lkj_local_prior_scale <- NULL
+    shdata$p0 <- p0
+    shdata$slab_scale <- slab_scale
+    shdata$slab_df <- slab_df
+    shdata$kappa_prior_scale <- kappa_prior_scale
+    if (is.null(init)) init <- .rhs_kappa_inits(Y, X, study, chains, slab_scale)
+    fit <- rstan::sampling(stanmodels$mvn_inferH_sparse_kappa,
+      data = shdata,
+      chains = chains,
+      cores = cores,
+      iter = iter,
+      init = init, ...
+    )
+    return(.attach_stability_check(fit, ""))
   }
 
   ## regularized horseshoe
@@ -443,5 +580,5 @@ mvn_infer_mlm_sparse <- function(Y, X, study,
       )
     }
   }
-  fit
+  .attach_stability_check(fit, "")
 }

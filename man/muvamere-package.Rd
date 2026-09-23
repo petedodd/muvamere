@@ -9,7 +9,8 @@
 A DESCRIPTION OF THE PACKAGE
 }
 \references{
-Stan Development Team (NA). RStan: the R interface to Stan. R package version 2.32.6. https://mc-stan.org
+Stan Development Team (NA). RStan: the R interface to Stan. R package
+version 2.32.6. https://mc-stan.org
 }
 \author{
 \strong{Maintainer}: Pete Dodd \email{p.j.dodd@sheffield.ac.uk} (\href{https://orcid.org/0000-0001-5825-9347}{ORCID})

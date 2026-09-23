@@ -1,6 +1,6 @@
 ## tests for the R-side simulators in R/utilities.R (no Stan involved)
 
-test_that("mvn_simulate produces correctly-shaped output and recovers Beta/Sigma", {
+test_that("mvn_simulate output is well-shaped and recovers Beta/Sigma", {
   set.seed(101)
   Nobs <- 4000
   NP <- 2
@@ -39,7 +39,7 @@ test_that("mvn_sample_study produces correctly-shaped output", {
   expect_equal(dim(out), c(Npats, NV))
 })
 
-test_that("mvn_simulate_studies produces the documented data-frame structure", {
+test_that("mvn_simulate_studies returns the documented data-frame structure", {
   set.seed(103)
   skip_if_not_installed("trialr")
   Ncovars <- 2

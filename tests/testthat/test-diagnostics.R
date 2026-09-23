@@ -1,6 +1,6 @@
 ## tests for mvn_diagnose() (R/diagnostics.R)
 
-test_that("mvn_diagnose returns a well-formed object and correctly handles structural NaN Rhat/ESS", {
+test_that("mvn_diagnose is well-formed and handles structural NaN Rhat/ESS", {
   skip_on_cran()
   set.seed(401)
   X <- cbind(1, rnorm(300))
@@ -24,7 +24,8 @@ test_that("mvn_diagnose returns a well-formed object and correctly handles struc
     "rhat_max", "ess_min", "ess_min_ratio", "n_divergent",
     "n_max_treedepth", "bfmi_min", "n_draws", "ok"
   ))
-  expect_true(is.finite(d$rhat_max)) # NOT NaN, despite the fixture having NA Rhat entries
+  ## NOT NaN, despite the fixture having NA Rhat entries
+  expect_true(is.finite(d$rhat_max))
   expect_true(is.finite(d$ess_min))
   expect_equal(d$n_draws, (1000 - 500) * 2)
   expect_true(d$ok) # this fit should genuinely be fine
@@ -45,8 +46,8 @@ test_that("mvn_diagnose's ok flag responds to its thresholds", {
     )
   )
 
-  ## an impossibly strict Rhat threshold must force ok = FALSE, deterministically,
-  ## regardless of how well the actual sampler behaved
+  ## an impossibly strict Rhat threshold must force ok = FALSE,
+  ## deterministically, regardless of how well the actual sampler behaved
   diag_strict <- mvn_diagnose(fit, rhat_threshold = -1)
   expect_false(diag_strict$ok)
 
