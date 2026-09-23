@@ -255,10 +255,13 @@ mvn_infer_mlm <- function(Y, X, study,
   max(abs(m[, alarm_chain] - others))
 }
 
-## Initial values for mvn_inferH_sparse_kappa.stan (the deviation-penalty model): informed
-## Omega_global start as in .rhs_inits, plus eta = 0 for every study (valid regardless of kappa,
-## since Omega_s = Omega_global + kappa*0 = Omega_global, already positive definite) and kappa = 1.
-## Unlike .rhs_inits there is no "alarm" variant as this was found empirically unnessary.
+## Initial values for mvn_inferH_sparse_kappa.stan (the deviation-penalty
+## model): informed Omega_global start as in .rhs_inits, each study's centered
+## correlations rr[i] started AT that Omega_global (so every Omega_s[i] is
+## positive definite at the start, whatever kappa is), and kappa = 1. The
+## log-scale tau hierarchy (tz, ltaum, lsig) takes Stan's random inits.
+## Unlike .rhs_inits there is no "alarm" variant as this was found
+## empirically unnecessary.
 .rhs_kappa_inits <- function(Y, X, study, chains, slab_scale) {
   NV <- ncol(Y)
   DR <- choose(NV, 2)
@@ -269,9 +272,12 @@ mvn_infer_mlm <- function(Y, X, study,
   lt0 <- c0 / sqrt(c0^2 + T0^2) # lam_tilde at lam = 1
   z_inf <- 0.9 * r[.upper_idx(NV)] / (T0 * lt0)
   lapply(seq_len(chains), function(ch) {
+    zg <- z_inf + stats::rnorm(DR, 0, 0.01)
     list(
-      zg = z_inf + stats::rnorm(DR, 0, 0.01), T = T0, lam = rep(1, DR), caux = 1,
-      eta = matrix(0, S, DR), kappa = 1 # eta as a plain matrix, not a list of vectors
+      zg = zg, T = T0, lam = rep(1, DR), caux = 1, kappa = 1,
+      ## rr as a plain [S, DR] matrix, not a list of vectors (rstan silently
+      ## ignores the latter and falls back to random inits)
+      rr = matrix(zg * T0 * lt0, S, DR, byrow = TRUE)
     )
   })
 }
@@ -315,10 +321,16 @@ mvn_infer_mlm <- function(Y, X, study,
 ##' Three priors are available. \code{prior = "rhs_kappa"} (the
 ##' \strong{default}, see below) is a deviation-penalty model that replaces
 ##' both \code{rho} and \code{Omega_local[i]}'s free per-study prior with a
-##' single, non-centered, estimated deviation strength \code{kappa}, so that
-##' each study's correlation is \code{Omega_global + kappa*eta[i]}
-##' (\code{eta[i]} standard normal, rejection-sampled for positive
-##' definiteness) rather than a free blend. \code{prior = "rhs"} (the
+##' single estimated deviation strength \code{kappa}: each study's
+##' correlations are \code{rr[i] ~ normal(Omega_global, kappa)} (centered;
+##' each study's correlation matrix is rejected if not positive definite)
+##' rather than a free blend, and the scales use a non-centered log-normal
+##' hierarchy, \code{log(tau[i]) ~ normal(ltaum, lsig)}. This
+##' parametrization (centered deviations + log-normal tau) was chosen over a
+##' non-centered one after an ablation: it removed most divergences and was
+##' 1.6-2.7x faster with identical accuracy, except that with weak data
+##' (small studies, large \code{kappa}) it can still show some divergences,
+##' while mixing better. \code{prior = "rhs"} (the
 ##' earlier default, kept for comparison/compatibility) is the
 ##' \emph{regularized horseshoe} of Piironen and Vehtari (2017,
 ##' \doi{10.1214/17-EJS1337SI}) in a non-centered parametrization, with the
@@ -381,8 +393,10 @@ mvn_infer_mlm <- function(Y, X, study,
 ##' @param study vector of which study each record belongs to
 ##' @param betaM_prior_sd prior for Betas
 ##' @param betaS_prior_sd prior for Betas
-##' @param tauM_prior_sd prior for tau
-##' @param tauS_prior_sd prior for tau
+##' @param tauM_prior_sd prior for tau: SD of the normal prior on the mean
+##'   scale (for \code{"rhs_kappa"}: on the mean of log(tau))
+##' @param tauS_prior_sd prior for tau: SD of the half-normal prior on the
+##'   between-study scale SD (for \code{"rhs_kappa"}: on the SD of log(tau))
 ##' @param lkj_local_prior_scale prior for local (per-study) correlation
 ##' @param rhoA beta parameter for rho
 ##' @param rhoB beta parameter for rho

@@ -9,8 +9,8 @@ mvn_sample_study_kappa(
   betag,
   sigb,
   kappa,
-  taug,
-  sigt,
+  ltaum,
+  lsig,
   OmegaG,
   max_tries = 200
 )
@@ -25,9 +25,10 @@ mvn_sample_study_kappa(
 \item{kappa}{deviation strength (correlation-scale SD of a new study's
 departure from OmegaG)}
 
-\item{taug}{global tau mean(s)}
+\item{ltaum}{mean(s) of log(tau) across studies (log-normal tau hierarchy,
+as fitted by \code{prior = "rhs_kappa"})}
 
-\item{sigt}{global tau SD(s)}
+\item{lsig}{SD(s) of log(tau) across studies}
 
 \item{OmegaG}{global correlation parameters}
 
@@ -45,12 +46,14 @@ deviation-penalty (kappa) generative mechanism
 \details{
 As \code{mvn_sample_study()}, but for a fitted
 \code{mvn_infer_mlm_sparse(prior = "rhs_kappa")} model instead of the
-rho-blend model: the new study's correlation is a non-centered perturbation
-of the global correlation, \code{OmegaG + kappa*eta} with \code{eta}
-entrywise standard normal, resampled (rejection sampling) until positive
-definite: the same mechanism the Stan model itself uses for each fitted
-study, so generation for a genuinely new cohort is consistent with what was
-fitted. See \code{mvn_generate_AP()}, which dispatches to this or
+rho-blend model: the new study's correlations are the global ones plus
+independent \code{normal(0, kappa)} deviations, resampled (rejection
+sampling) until positive definite: the same distribution the Stan model
+itself gives each fitted study, so generation for a genuinely new cohort
+is consistent with what was fitted. The new study's scales are
+log-normal, \code{log(tau) ~ N(ltaum, lsig)}, again matching the fitted
+model. See
+\code{mvn_generate_AP()}, which dispatches to this or
 \code{mvn_sample_study()} depending on which model \code{fit} came from.
 }
 \author{

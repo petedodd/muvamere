@@ -39,9 +39,7 @@ Each call draws a new study-level correlation and per-study Betas/taus, so
 this generates new synthetic cohorts consistent with the fitted
 between-study heterogeneity. Uses posterior means for the global
 hyperparameters; it does not propagate posterior uncertainty in those
-hyperparameters into the generated population. A fuller version should draw
-hyperparameters from the posterior per replicate rather than plugging in
-one point estimate (see the package TODO list).
+hyperparameters into the generated population.
 }
 \author{
 Pete Dodd
