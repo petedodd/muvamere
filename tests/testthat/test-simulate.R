@@ -63,3 +63,14 @@ test_that("mvn_simulate_studies returns the documented data-frame structure", {
   ## obsno should restart at 1 within each study
   expect_equal(out$obsno[out$studyno == 1], 1:Npats)
 })
+
+test_that(".rtruncnorm0 draws the truncated (not folded) normal for tau", {
+  set.seed(7)
+  ## mean 0.1, sd 1: truncated mean = m + dnorm(m) / pnorm(m); a folded
+  ## normal (the old abs(rnorm()) draw) would give ~0.80 instead
+  x <- muvamere:::.rtruncnorm0(1e5, 0.1, 1)
+  expect_true(all(x > 0))
+  expect_equal(mean(x), 0.1 + dnorm(0.1) / pnorm(0.1), tolerance = 0.01)
+  ## vectorised over mean/sd, one draw per variate
+  expect_length(muvamere:::.rtruncnorm0(3, c(1, 2, 3), 0.1), 3)
+})

@@ -51,7 +51,7 @@ mvn_sample_study <- function(X, betag, sigb,
     nrow = nrow(betag), ncol = ncol(betag)
   )
   ## correlations
-  taus <- abs(rnorm(nrow(OmegaG), mean = taug, sd = sigt))
+  taus <- .rtruncnorm0(nrow(OmegaG), mean = taug, sd = sigt)
   OmegaL <- trialr::rlkjcorr(1, K = nrow(OmegaG), eta = lkj_local)
   omega <- (rho * OmegaG + (1 - rho) * OmegaL)
   Sig <- diag(taus) %*% omega %*% diag(taus)
@@ -112,7 +112,7 @@ mvn_sample_study_kappa <- function(X, betag, sigb, kappa, taug, sigt, OmegaG, ma
       )
     }
   }
-  taus <- abs(rnorm(nrow(OmegaG), mean = taug, sd = sigt))
+  taus <- .rtruncnorm0(nrow(OmegaG), mean = taug, sd = sigt)
   Sig <- diag(taus) %*% omega %*% diag(taus)
   ## samples
   mvn_simulate(X, betas, Sig)
@@ -161,4 +161,16 @@ mvn_simulate_studies <- function(Xlist,
     SS[[i]]$obsno <- 1:nrow(SS[[i]])
   }
   do.call("rbind", SS)
+}
+
+## draw from normal(mean, sd) truncated to (0, Inf), matching the fitted prior
+## `tau ~ normal(taum, sigt)` with <lower=0> (a folded normal, abs(rnorm()),
+## only agrees with it when mean >> sd). Inverse CDF on the log scale, so it
+## stays accurate even when almost all the mass lies below zero.
+.rtruncnorm0 <- function(n, mean, sd) {
+  mean <- rep_len(mean, n)
+  sd <- rep_len(sd, n)
+  logq <- pnorm(mean / sd, log.p = TRUE) # log P(X > 0)
+  v <- log(runif(n)) + logq # log upper-tail prob, uniform on (0, P(X > 0))
+  mean - sd * qnorm(v, log.p = TRUE)
 }
