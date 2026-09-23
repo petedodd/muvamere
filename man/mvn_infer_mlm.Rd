@@ -23,9 +23,11 @@ mvn_infer_mlm(
 )
 }
 \arguments{
-\item{Y}{multivariate response data - each line sign/symptom values for a patient}
+\item{Y}{multivariate response data - each line sign/symptom values for a
+patient}
 
-\item{X}{multivariable explanatory data - each line a set of predictors for a patient}
+\item{X}{multivariable explanatory data - each line a set of predictors for
+a patient}
 
 \item{study}{vector of which study each record belongs to}
 

@@ -3,7 +3,7 @@
 ## real (short) MCMC fits, so they're slower than the pure-R tests but still
 ## fast enough (a few seconds each) for routine use.
 
-test_that("mvn_infer recovers Beta and exposes Sigma as a generated quantity", {
+test_that("mvn_infer recovers Beta and exposes Sigma as generated quantity", {
   skip_on_cran()
   set.seed(201)
   Nobs <- 300
@@ -50,7 +50,7 @@ test_that("mvn_infer rejects a Z with the wrong number of columns", {
 })
 
 
-test_that("mvn_infer's Z-prediction pathway works when NP != NV, and mvn_extract_predictions returns the right shape", {
+test_that("Z-prediction works for NP != NV; mvn_extract_predictions shape", {
   skip_on_cran()
   set.seed(203)
   Nobs <- 300
@@ -78,7 +78,7 @@ test_that("mvn_infer's Z-prediction pathway works when NP != NV, and mvn_extract
   expect_equal(pred_mean, true_mean, tolerance = 0.5, ignore_attr = TRUE)
 })
 
-test_that("mvn_extract_predictions errors informatively when Z was not supplied", {
+test_that("mvn_extract_predictions errors informatively when Z not supplied", {
   skip_on_cran()
   set.seed(204)
   Nobs <- 50

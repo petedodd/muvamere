@@ -29,15 +29,17 @@ mvn_compare_means <- function(true_mu, est_mu) {
 }
 
 
-##' Compare a true covariance/correlation matrix against an estimated or simulated one
+##' Compare a true covariance/correlation matrix against an estimated or
+##' simulated one
 ##'
 ##' A simple RMSE-based comparison over the upper triangle (including the
-##' diagonal) of two same-shaped matrices, e.g. for comparing \code{mvn_infer()}'s
-##' fitted \code{Sigma} against known simulation truth.
+##' diagonal) of two same-shaped matrices, e.g. for comparing
+##' \code{mvn_infer()}'s fitted \code{Sigma} against known simulation truth.
 ##'
 ##' @title mvn_compare_cov
 ##' @param true_Sigma true covariance/correlation matrix
-##' @param est_Sigma estimated/simulated covariance/correlation matrix, same dimensions as \code{true_Sigma}
+##' @param est_Sigma estimated/simulated covariance/correlation matrix, same
+##'   dimensions as \code{true_Sigma}
 ##' @return a data frame with columns \code{true}, \code{est}, and \code{rmse}
 ##'   (the overall root-mean-squared error over the upper triangle, repeated
 ##'   on every row for easy access via \code{result$rmse[1]})

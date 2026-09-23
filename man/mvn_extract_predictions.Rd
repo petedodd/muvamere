@@ -7,20 +7,24 @@
 mvn_extract_predictions(fit)
 }
 \arguments{
-\item{fit}{a stanfit object returned by \code{mvn_infer()}, called with non-NULL Z}
+\item{fit}{a stanfit object returned by \code{mvn_infer()}, called with
+non-NULL Z}
 }
 \value{
-a 3-D array \link{ndraws, NewObs, NV} of posterior-predictive draws of Ynew
+a 3-D array [ndraws, NewObs, NV] of posterior-predictive draws of
+Ynew
 }
 \description{
-Extract posterior-predictive draws for new covariate data from a mvn_infer() fit
+Extract posterior-predictive draws for new covariate data from a
+mvn_infer() fit
 }
 \details{
-Pulls the \code{Ynew} generated quantity (populated only if \code{mvn_infer()} was
-called with a non-NULL \code{Z}) out of a stanfit and reshapes it into a proper
-3-D array indexed \link{draw, new observation, variate}, rather than leaving the caller
-to reshape rstan's flattened, row-major summary output by hand (see the row-major
-reshape note in \code{mvn_extract_hyperparams()}/the package TODO list).
+Pulls the \code{Ynew} generated quantity (populated only if
+\code{mvn_infer()} was called with a non-NULL \code{Z}) out of a stanfit
+and reshapes it into a proper 3-D array indexed [draw, new observation,
+variate], rather than leaving the caller to reshape rstan's flattened,
+row-major summary output by hand (see the row-major reshape note in
+\code{mvn_extract_hyperparams()}/the package TODO list).
 }
 \author{
 Pete Dodd

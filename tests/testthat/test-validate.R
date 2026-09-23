@@ -1,6 +1,6 @@
 ## tests for mvn_compare_means()/mvn_compare_cov() (R/validate.R)
 
-test_that("mvn_compare_means computes the right RMSE and errors on shape mismatch", {
+test_that("mvn_compare_means gives the right RMSE, errors on shape mismatch", {
   out <- mvn_compare_means(true_mu = c(0, 0), est_mu = c(1, 1))
   expect_s3_class(out, "data.frame")
   expect_named(out, c("true", "est", "rmse"))
@@ -21,14 +21,15 @@ test_that("mvn_compare_means computes the right RMSE and errors on shape mismatc
 })
 
 
-test_that("mvn_compare_cov compares only the upper triangle and errors on shape mismatch", {
+test_that("mvn_compare_cov uses only the upper triangle; errors on mismatch", {
   true_Sigma <- diag(1, 3)
   est_Sigma <- diag(1, 3)
   est_Sigma[1, 2] <- est_Sigma[2, 1] <- 0.6 # off-diagonal difference
   ## lower-triangle-only differences should NOT affect the result
   ## upper.tri(..., diag=TRUE) is compared
   est_Sigma_lower_only <- diag(1, 3)
-  est_Sigma_lower_only[2, 1] <- 0.6 # asymmetric on purpose, lower triangle only
+  ## asymmetric on purpose, lower triangle only
+  est_Sigma_lower_only[2, 1] <- 0.6
 
   out <- mvn_compare_cov(true_Sigma, est_Sigma)
   expect_s3_class(out, "data.frame")
@@ -37,7 +38,8 @@ test_that("mvn_compare_cov compares only the upper triangle and errors on shape 
   expect_true(out$rmse[1] > 0)
 
   out_lower_only <- mvn_compare_cov(true_Sigma, est_Sigma_lower_only)
-  expect_equal(out_lower_only$rmse[1], 0) # upper triangle identical, so RMSE should be 0
+  ## upper triangle identical, so RMSE should be 0
+  expect_equal(out_lower_only$rmse[1], 0)
 
   expect_error(
     mvn_compare_cov(diag(1, 2), diag(1, 3)),
