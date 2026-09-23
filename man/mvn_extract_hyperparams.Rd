@@ -13,11 +13,13 @@ mvn_extract_hyperparams(fit)
 \value{
 a list with elements \code{model} (\code{"rho"} or \code{"kappa"}),
 \code{betag} (NP x NV matrix, posterior mean of BetaM), \code{sigb} (NP x
-NV matrix, posterior mean of BetaS), \code{taug} (length-NV vector,
-posterior mean of taum), \code{sigt} (length-NV vector, posterior mean of
-sigt), \code{OmegaG} (NV x NV matrix, posterior mean of Omega_global),
-and either \code{rho} (scalar) or \code{kappa} (scalar) depending on
-\code{model}
+NV matrix, posterior mean of BetaS), \code{OmegaG} (NV x NV matrix,
+posterior mean of Omega_global), and then, depending on \code{model}:
+for \code{"rho"}, \code{taug}/\code{sigt} (length-NV vectors, posterior
+means of taum/sigt, the truncated-normal tau hierarchy) and \code{rho}
+(scalar); for \code{"kappa"}, \code{ltaum}/\code{lsig} (length-NV
+vectors, posterior means of the mean and SD of log(tau), the log-normal
+tau hierarchy) and \code{kappa} (scalar)
 }
 \description{
 Extract global hyperparameter point estimates from a fitted hierarchical

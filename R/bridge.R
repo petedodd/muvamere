@@ -29,11 +29,13 @@
 ##'   \code{mvn_infer_mlm_sparse()}
 ##' @return a list with elements \code{model} (\code{"rho"} or \code{"kappa"}),
 ##'   \code{betag} (NP x NV matrix, posterior mean of BetaM), \code{sigb} (NP x
-##'   NV matrix, posterior mean of BetaS), \code{taug} (length-NV vector,
-##'   posterior mean of taum), \code{sigt} (length-NV vector, posterior mean of
-##'   sigt), \code{OmegaG} (NV x NV matrix, posterior mean of Omega_global),
-##'   and either \code{rho} (scalar) or \code{kappa} (scalar) depending on
-##'   \code{model}
+##'   NV matrix, posterior mean of BetaS), \code{OmegaG} (NV x NV matrix,
+##'   posterior mean of Omega_global), and then, depending on \code{model}:
+##'   for \code{"rho"}, \code{taug}/\code{sigt} (length-NV vectors, posterior
+##'   means of taum/sigt, the truncated-normal tau hierarchy) and \code{rho}
+##'   (scalar); for \code{"kappa"}, \code{ltaum}/\code{lsig} (length-NV
+##'   vectors, posterior means of the mean and SD of log(tau), the log-normal
+##'   tau hierarchy) and \code{kappa} (scalar)
 ##' @author Pete Dodd
 ##' @export
 mvn_extract_hyperparams <- function(fit) {
@@ -52,17 +54,21 @@ mvn_extract_hyperparams <- function(fit) {
     unname(rstan::summary(fit, pars = par)$summary[, "mean"])
   }
 
-  common <- list(
-    betag = get_mat("BetaM", NP, NV),
-    sigb = get_mat("BetaS", NP, NV),
-    taug = get_vec("taum"),
-    sigt = get_vec("sigt"),
-    OmegaG = get_mat("Omega_global", NV, NV)
-  )
+  betag <- get_mat("BetaM", NP, NV)
+  sigb <- get_mat("BetaS", NP, NV)
+  OmegaG <- get_mat("Omega_global", NV, NV)
   if ("kappa" %in% names(fit@par_dims)) {
-    c(common, list(model = "kappa", kappa = get_vec("kappa")))
+    list(
+      betag = betag, sigb = sigb,
+      ltaum = get_vec("ltaum"), lsig = get_vec("lsig"),
+      OmegaG = OmegaG, model = "kappa", kappa = get_vec("kappa")
+    )
   } else {
-    c(common, list(model = "rho", rho = get_vec("rho")))
+    list(
+      betag = betag, sigb = sigb,
+      taug = get_vec("taum"), sigt = get_vec("sigt"),
+      OmegaG = OmegaG, model = "rho", rho = get_vec("rho")
+    )
   }
 }
 
@@ -79,9 +85,7 @@ mvn_extract_hyperparams <- function(fit) {
 ##' this generates new synthetic cohorts consistent with the fitted
 ##' between-study heterogeneity. Uses posterior means for the global
 ##' hyperparameters; it does not propagate posterior uncertainty in those
-##' hyperparameters into the generated population. A fuller version should draw
-##' hyperparameters from the posterior per replicate rather than plugging in
-##' one point estimate (see the package TODO list).
+##' hyperparameters into the generated population.
 ##'
 ##' @title mvn_generate_AP
 ##' @param fit a stanfit object returned by \code{mvn_infer_mlm()} or
@@ -106,7 +110,7 @@ mvn_generate_AP <- function(fit, Xlist, lkj_local = 3) {
     SS[[i]] <- if (hyper$model == "kappa") {
       mvn_sample_study_kappa(
         Xlist[[i]], hyper$betag, hyper$sigb,
-        hyper$kappa, hyper$taug, hyper$sigt, hyper$OmegaG
+        hyper$kappa, hyper$ltaum, hyper$lsig, hyper$OmegaG
       )
     } else {
       mvn_sample_study(

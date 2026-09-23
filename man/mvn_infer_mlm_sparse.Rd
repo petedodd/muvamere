@@ -43,9 +43,11 @@ a patient}
 
 \item{betaS_prior_sd}{prior for Betas}
 
-\item{tauM_prior_sd}{prior for tau}
+\item{tauM_prior_sd}{prior for tau: SD of the normal prior on the mean
+scale (for \code{"rhs_kappa"}: on the mean of log(tau))}
 
-\item{tauS_prior_sd}{prior for tau}
+\item{tauS_prior_sd}{prior for tau: SD of the half-normal prior on the
+between-study scale SD (for \code{"rhs_kappa"}: on the SD of log(tau))}
 
 \item{lkj_local_prior_scale}{prior for local (per-study) correlation}
 
@@ -124,10 +126,16 @@ uses a plain LKJ prior.
 Three priors are available. \code{prior = "rhs_kappa"} (the
 \strong{default}, see below) is a deviation-penalty model that replaces
 both \code{rho} and \code{Omega_local[i]}'s free per-study prior with a
-single, non-centered, estimated deviation strength \code{kappa}, so that
-each study's correlation is \code{Omega_global + kappa*eta[i]}
-(\code{eta[i]} standard normal, rejection-sampled for positive
-definiteness) rather than a free blend. \code{prior = "rhs"} (the
+single estimated deviation strength \code{kappa}: each study's
+correlations are \code{rr[i] ~ normal(Omega_global, kappa)} (centered;
+each study's correlation matrix is rejected if not positive definite)
+rather than a free blend, and the scales use a non-centered log-normal
+hierarchy, \code{log(tau[i]) ~ normal(ltaum, lsig)}. This
+parametrization (centered deviations + log-normal tau) was chosen over a
+non-centered one after an ablation: it removed most divergences and was
+1.6-2.7x faster with identical accuracy, except that with weak data
+(small studies, large \code{kappa}) it can still show some divergences,
+while mixing better. \code{prior = "rhs"} (the
 earlier default, kept for comparison/compatibility) is the
 \emph{regularized horseshoe} of Piironen and Vehtari (2017,
 \doi{10.1214/17-EJS1337SI}) in a non-centered parametrization, with the

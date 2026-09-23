@@ -241,11 +241,18 @@ test_that("prior = 'rhs_kappa' fits and recovers a known correlation", {
   expect_equal(fit@par_dims$Omega_global, c(4, 4))
   expect_true("kappa" %in% names(fit@par_dims))
   expect_false("rho" %in% names(fit@par_dims)) # no rho-blend in this model
+  ## centered per-study correlations and the log-normal tau hierarchy
+  expect_equal(fit@par_dims$rr, c(3, 6))
+  expect_false("eta" %in% names(fit@par_dims))
+  expect_true(all(c("ltaum", "lsig") %in% names(fit@par_dims)))
   ## no free per-study correlation either
   expect_false("Omega_local" %in% names(fit@par_dims))
   hyper <- mvn_extract_hyperparams(fit)
   expect_equal(hyper$model, "kappa")
   expect_true(is.numeric(hyper$kappa) && hyper$kappa >= 0)
+  expect_length(hyper$ltaum, 4)
+  expect_true(all(hyper$lsig >= 0))
+  expect_null(hyper$taug) # truncated-normal tau is the rho models' only
   Og <- hyper$OmegaG
   expect_equal(diag(Og), rep(1, 4), tolerance = 1e-6)
   expect_true(min(eigen(Og, symmetric = TRUE, only.values = TRUE)$values) > 0)
@@ -297,7 +304,7 @@ test_that("mvn_sample_study_kappa gives valid, well-shaped correlation", {
   X <- cbind(1, runif(200))
   Y <- mvn_sample_study_kappa(X, matrix(1, 2, 4), matrix(0.1, 2, 4),
     kappa = 0.05,
-    taug = rep(1, 4), sigt = rep(0.1, 4), OmegaG = OG
+    ltaum = rep(0, 4), lsig = rep(0.1, 4), OmegaG = OG
   )
   expect_equal(dim(Y), c(200, 4))
   ## a tiny kappa means the generated study's own empirical correlation should
@@ -323,4 +330,21 @@ test_that(".attach_stability_check flags instability despite agreement", {
   )
   expect_true(muvamere:::.severely_unstable(bad))
   expect_false(muvamere:::.severely_unstable(good))
+})
+
+test_that(".rhs_kappa_inits starts study correlations at Omega_global", {
+  set.seed(3)
+  d <- sim_known_global(diag(4), S = 3, Np = 50)
+  ini <- muvamere:::.rhs_kappa_inits(d$Y, d$X, d$study, chains = 2,
+    slab_scale = 0.5
+  )
+  expect_length(ini, 2)
+  for (l in ini) {
+    expect_null(l$eta)
+    expect_equal(dim(l$rr), c(3, 6)) # [studies, pairs], a plain matrix
+    ## identical rows = Omega_global's upper triangle, so every study's
+    ## correlation matrix starts positive definite
+    og <- l$zg * 0.3 * 0.5 / sqrt(0.5^2 + 0.3^2)
+    for (i in 1:3) expect_equal(l$rr[i, ], og)
+  }
 })
