@@ -21,6 +21,7 @@ mvn_infer_mlm_sparse(
   slab_df = 4,
   check_starts = TRUE,
   start_gap_tol = 0.1,
+  auto_refit = TRUE,
   init = NULL,
   iter = 2000,
   cores = 4,
@@ -71,6 +72,11 @@ chain, see Details. Ignored (with no check) if \code{chains < 2} or
 
 \item{start_gap_tol}{correlation-scale threshold for the start check warning}
 
+\item{auto_refit}{(\code{"rhs"} only, and only when \code{check_starts}
+fires) automatically resample with informed-only starts (roughly
+doubling the wall time of a failing fit) rather than just warning and
+returning the disagreeing fit. Default \code{TRUE}.}
+
 \item{init}{optional Stan \code{init} argument. Default \code{NULL}:
 informed starts for \code{"rhs"}, Stan's random inits for
 \code{"horseshoe"}.}
@@ -84,7 +90,8 @@ informed starts for \code{"rhs"}, Stan's random inits for
 \value{
 a Stan sample object (for \code{"rhs"} with a start check, carrying an
 attribute \code{"start_check"}: a list with \code{gap}, \code{tol},
-\code{alarm_chain} and \code{agree})
+\code{alarm_chain}, \code{agree} and \code{refit} (whether an automatic
+refit happened))
 }
 \description{
 MCMC sampling for data from multiple studies, with sparsity-promoting
@@ -116,10 +123,14 @@ while the last chain starts from a deliberately sparse point. If the true
 correlations are dense, a chain started sparse can fall into a spurious
 all-zero mode (with reassuring \code{Rhat} if \emph{all} chains do so). If the
 last chain's posterior-mean \code{Omega_global} differs from the others' by
-more than \code{start_gap_tol} a warning is issued; in that case treat the
-fit as unreliable (or refit with \code{check_starts = FALSE} to use
-informed starts only). The result is stored in the \code{"start_check"}
-attribute of the returned fit.
+more than \code{start_gap_tol}, and \code{auto_refit = TRUE} (the default),
+the model is automatically resampled with every chain started from the
+informed point and a warning names both the original disagreement and the
+fact that a refit happened (this refit has no alarm chain of its own, so it
+is not itself protected against the same failure: see \code{auto_refit}).
+With \code{auto_refit = FALSE} the original (disagreeing) fit is returned
+with a warning instead. The check's outcome is stored in the
+\code{"start_check"} attribute of the returned fit either way.
 }
 \references{
 Piironen J, Vehtari A (2017). Sparsity information and

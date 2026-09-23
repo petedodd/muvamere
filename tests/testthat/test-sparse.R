@@ -165,7 +165,10 @@ test_that("the start check raises a warning when the alarm chain disagrees", {
     }
   )
   expect_true(any(grepl("start check FAILED", warns)))
-  expect_false(attr(fit, "start_check")$agree)
+  expect_true(any(grepl("Auto-refitting", warns))) # auto_refit = TRUE is the default
+  chk <- attr(fit, "start_check")
+  expect_false(chk$agree)
+  expect_true(chk$refit) # the returned fit is the informed-only refit, not the disagreeing one
   ## and no check with a single chain, a user init, or check_starts = FALSE
   f1 <- suppressWarnings(mvn_infer_mlm_sparse(d$Y, d$X, d$study,
     iter = 200, chains = 1, cores = 1, refresh = 0, seed = 1
@@ -176,6 +179,29 @@ test_that("the start check raises a warning when the alarm chain disagrees", {
     refresh = 0, seed = 1, check_starts = FALSE
   ))
   expect_null(attr(f2, "start_check"))
+})
+
+test_that("auto_refit = FALSE returns the disagreeing fit instead of resampling", {
+  skip_on_cran()
+  skip_if_not_installed("trialr")
+  OG <- diag(3)
+  d <- sim_known_global(OG, S = 2, Np = 60, seed = 13)
+  warns <- character()
+  fit <- withCallingHandlers(
+    mvn_infer_mlm_sparse(d$Y, d$X, d$study,
+      iter = 200, chains = 2, cores = 1,
+      refresh = 0, seed = 1, start_gap_tol = 0, auto_refit = FALSE
+    ),
+    warning = function(w) {
+      warns <<- c(warns, conditionMessage(w))
+      invokeRestart("muffleWarning")
+    }
+  )
+  expect_true(any(grepl("start check FAILED", warns)))
+  expect_false(any(grepl("Auto-refitting", warns)))
+  chk <- attr(fit, "start_check")
+  expect_false(chk$agree)
+  expect_false(chk$refit)
 })
 
 test_that("prior = 'horseshoe' still fits the ordinary-horseshoe model", {
