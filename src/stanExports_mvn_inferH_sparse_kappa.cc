@@ -2,12 +2,12 @@
 
 #include <Rcpp.h>
 using namespace Rcpp ;
-#include "stanExports_mvn_inferH.h"
+#include "stanExports_mvn_inferH_sparse_kappa.h"
 
-RCPP_MODULE(stan_fit4mvn_inferH_mod) {
+RCPP_MODULE(stan_fit4mvn_inferH_sparse_kappa_mod) {
 
 
-    class_<rstan::stan_fit<stan_model, boost::ecuyer1988> >("rstantools_model_mvn_inferH")
+    class_<rstan::stan_fit<stan_model, boost::ecuyer1988> >("rstantools_model_mvn_inferH_sparse_kappa")
 
     .constructor<SEXP,SEXP,SEXP>()
 

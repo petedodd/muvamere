@@ -13,11 +13,13 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 
 
 RcppExport SEXP _rcpp_module_boot_stan_fit4mvn_infer1e_mod();
-RcppExport SEXP _rcpp_module_boot_stan_fit4mvn_inferH_mod();
+RcppExport SEXP _rcpp_module_boot_stan_fit4mvn_inferH_mixed_mod();
+RcppExport SEXP _rcpp_module_boot_stan_fit4mvn_inferH_sparse_kappa_mod();
 
 static const R_CallMethodDef CallEntries[] = {
     {"_rcpp_module_boot_stan_fit4mvn_infer1e_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4mvn_infer1e_mod, 0},
-    {"_rcpp_module_boot_stan_fit4mvn_inferH_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4mvn_inferH_mod, 0},
+    {"_rcpp_module_boot_stan_fit4mvn_inferH_mixed_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4mvn_inferH_mixed_mod, 0},
+    {"_rcpp_module_boot_stan_fit4mvn_inferH_sparse_kappa_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4mvn_inferH_sparse_kappa_mod, 0},
     {NULL, NULL, 0}
 };
 

@@ -13,7 +13,7 @@ mvn_diagnose(
 }
 \arguments{
 \item{fit}{a stanfit object, e.g. from
-\code{mvn_infer()}/\code{mvn_infer_mlm()}}
+\code{mvn_infer()}/\code{mvn_infer_mlm_sparse()}}
 
 \item{rhat_threshold}{flag as a problem if the max (non-NA) Rhat exceeds
 this, default 1.01}

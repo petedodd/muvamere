@@ -8,12 +8,11 @@ mvn_simulate_studies(
   Xlist,
   betag,
   sigb,
-  rhoA,
-  rhoB,
-  taug,
-  sigt,
-  lkj_local,
-  lkj_global
+  kappa,
+  ltaum,
+  lsig,
+  lkj_global,
+  binary = NULL
 )
 }
 \arguments{
@@ -23,30 +22,33 @@ mvn_simulate_studies(
 
 \item{sigb}{matrix global regression parameters SD}
 
-\item{rhoA}{beta prior parameter for interpolant between local and global
-correlations}
+\item{kappa}{deviation strength of each study's correlations from the
+global correlation matrix}
 
-\item{rhoB}{beta prior parameter for interpolant between local and global
-correlations}
+\item{ltaum}{mean(s) of log(tau) across studies}
 
-\item{taug}{global tau mean(s)}
-
-\item{sigt}{global tau SD(s)}
-
-\item{lkj_local}{local correlation LKJ prior parameter}
+\item{lsig}{SD(s) of log(tau) across studies}
 
 \item{lkj_global}{global correlation LKJ prior parameter}
+
+\item{binary}{optional logical vector: which variates are binary (see
+\code{mvn_sample_study_kappa()})}
 }
 \value{
 a data frame with responses for all studies, with studyno and obsno
-columns appended
+columns appended; the drawn global correlation matrix is attached as
+attribute \code{"OmegaG"}
 }
 \description{
 Simulate responses for a number of studies
 }
 \details{
 Given a list of covariate data inputs, a corresponding set of responses is
-generated.
+generated under the deviation-penalty model fitted by
+\code{mvn_infer_mlm_sparse()}: a global correlation matrix is drawn from
+an LKJ distribution, then each study gets its own correlations (the global
+ones plus \code{normal(0, kappa)} deviations), regression coefficients
+and log-normal scales via \code{mvn_sample_study_kappa()}.
 }
 \author{
 Pete Dodd

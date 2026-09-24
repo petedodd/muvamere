@@ -43,6 +43,8 @@ model with no prediction (NewObs=0).}
 
 \item{chains}{number of chains to use}
 
+\item{...}{further arguments passed to \code{rstan::sampling()}}
+
 \item{prior}{for tau Cauchy scale in correlations, default=2.5}
 }
 \value{

@@ -4,42 +4,36 @@
 \alias{mvn_generate_AP}
 \title{mvn_generate_AP}
 \usage{
-mvn_generate_AP(fit, Xlist, lkj_local = 3)
+mvn_generate_AP(fit, Xlist)
 }
 \arguments{
-\item{fit}{a stanfit object returned by \code{mvn_infer_mlm()} or
-\code{mvn_infer_mlm_sparse()}}
+\item{fit}{a \code{muvamere_generator}, or a stanfit from
+\code{mvn_infer_mlm_sparse()} or \code{mvn_infer_mlm_mixed()}}
 
 \item{Xlist}{list of covariate data matrices, one per synthetic study to
-generate}
-
-\item{lkj_local}{local correlation LKJ prior parameter for the new studies'
-local correlation draws. Only used for a rho-blend \code{fit} (ignored,
-with a message, for a deviation-penalty \code{fit}, which has no
-equivalent parameter). This is a prior tuning constant that
-\code{mvn_infer_mlm()}/\code{mvn_infer_mlm_sparse()} take as fixed input
-data (not something they estimate a posterior for): reuse the value
-passed to the original fit.}
+generate, with the same columns as the covariates used in the fit}
 }
 \value{
-a data frame with responses for all generated studies, with studyno
-and obsno columns appended (same format as \code{mvn_simulate_studies()})
+a data frame with responses for all generated studies, columns
+named as the fitted variates, with studyno and obsno columns appended
+(same format as \code{mvn_simulate_studies()})
 }
 \description{
 Generate a synthetic multi-study population from a fitted hierarchical
 model
 }
 \details{
-Plugs posterior-mean hyperparameters (via \code{mvn_extract_hyperparams()})
-into \code{mvn_sample_study()} (rho-blend fits) or
-\code{mvn_sample_study_kappa()} (deviation-penalty fits) for each target
-design matrix in \code{Xlist}: the two are dispatched automatically based
-on which model \code{fit} came from, see \code{mvn_extract_hyperparams()}.
-Each call draws a new study-level correlation and per-study Betas/taus, so
-this generates new synthetic cohorts consistent with the fitted
-between-study heterogeneity. Uses posterior means for the global
-hyperparameters; it does not propagate posterior uncertainty in those
-hyperparameters into the generated population.
+Simulates one new study per target design matrix in \code{Xlist}, each
+with its own study-level correlations, regression coefficients and
+scales drawn around the fitted global hyperparameters (so the generated
+cohorts reflect the fitted between-study heterogeneity), via
+\code{mvn_sample_study_kappa()}. Binary variates are returned as 0/1.
+
+Given a \emph{generator} (\code{mvn_make_generator()}), each synthetic
+study uses a different random posterior draw of the global
+hyperparameters, so posterior uncertainty is propagated. Given a
+\emph{fit}, the posterior means are plugged in for every study
+(\code{mvn_extract_hyperparams()}), which understates that uncertainty.
 }
 \author{
 Pete Dodd

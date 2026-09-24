@@ -12,7 +12,8 @@ mvn_sample_study_kappa(
   ltaum,
   lsig,
   OmegaG,
-  max_tries = 200
+  max_tries = 200,
+  binary = NULL
 )
 }
 \arguments{
@@ -35,6 +36,12 @@ as fitted by \code{prior = "rhs_kappa"})}
 \item{max_tries}{maximum positive-definiteness rejection-sampling attempts
 before erroring (default 200; only relevant for kappa large enough that
 most draws are invalid)}
+
+\item{binary}{optional logical vector (one per variate): which variates
+are binary. Binary variates have latent scale 1 and are returned as
+0/1 (latent > 0), as in \code{mvn_infer_mlm_mixed()}; \code{ltaum} and
+\code{lsig} then give the continuous variates only. Default: all
+continuous.}
 }
 \value{
 matrix of responses
@@ -44,17 +51,16 @@ Simulate responses for a single, unobserved study using the
 deviation-penalty (kappa) generative mechanism
 }
 \details{
-As \code{mvn_sample_study()}, but for a fitted
-\code{mvn_infer_mlm_sparse(prior = "rhs_kappa")} model instead of the
-rho-blend model: the new study's correlations are the global ones plus
-independent \code{normal(0, kappa)} deviations, resampled (rejection
-sampling) until positive definite: the same distribution the Stan model
-itself gives each fitted study, so generation for a genuinely new cohort
-is consistent with what was fitted. The new study's scales are
-log-normal, \code{log(tau) ~ N(ltaum, lsig)}, again matching the fitted
-model. See
-\code{mvn_generate_AP()}, which dispatches to this or
-\code{mvn_sample_study()} depending on which model \code{fit} came from.
+Draws one new study under the model fitted by
+\code{mvn_infer_mlm_sparse()}: regression coefficients around
+\code{betag} with SDs \code{sigb}; correlations equal to the global ones
+plus independent \code{normal(0, kappa)} deviations, resampled
+(rejection sampling) until positive definite, i.e. the same distribution
+the Stan model gives each fitted study, so generation for a genuinely new
+cohort is consistent with what was fitted; and log-normal scales,
+\code{log(tau) ~ N(ltaum, lsig)}, again matching the fitted model. See
+\code{mvn_generate_AP()}, which calls this with plug-in estimates from a
+fit.
 }
 \author{
 Pete Dodd
