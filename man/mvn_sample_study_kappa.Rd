@@ -12,7 +12,8 @@ mvn_sample_study_kappa(
   ltaum,
   lsig,
   OmegaG,
-  max_tries = 200
+  max_tries = 200,
+  binary = NULL
 )
 }
 \arguments{
@@ -35,6 +36,12 @@ as fitted by \code{prior = "rhs_kappa"})}
 \item{max_tries}{maximum positive-definiteness rejection-sampling attempts
 before erroring (default 200; only relevant for kappa large enough that
 most draws are invalid)}
+
+\item{binary}{optional logical vector (one per variate): which variates
+are binary. Binary variates have latent scale 1 and are returned as
+0/1 (latent > 0), as in \code{mvn_infer_mlm_mixed()}; \code{ltaum} and
+\code{lsig} then give the continuous variates only. Default: all
+continuous.}
 }
 \value{
 matrix of responses

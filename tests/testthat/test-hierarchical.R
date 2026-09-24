@@ -38,7 +38,8 @@ test_that("mvn_extract_hyperparams gives correctly (re)shaped hyperparams", {
   ))
   hyper <- mvn_extract_hyperparams(fit)
   expect_named(
-    hyper, c("betag", "sigb", "ltaum", "lsig", "OmegaG", "model", "kappa")
+    hyper,
+    c("betag", "sigb", "ltaum", "lsig", "OmegaG", "model", "kappa", "binary")
   )
   expect_equal(hyper$model, "kappa")
   expect_equal(dim(hyper$betag), c(2, 3))
@@ -49,7 +50,10 @@ test_that("mvn_extract_hyperparams gives correctly (re)shaped hyperparams", {
   expect_true(hyper$kappa >= 0)
   expect_equal(dim(hyper$OmegaG), c(3, 3))
   ## a correlation matrix
-  expect_equal(diag(hyper$OmegaG), rep(1, 3), tolerance = 1e-6)
+  expect_equal(unname(diag(hyper$OmegaG)), rep(1, 3), tolerance = 1e-6)
+  expect_equal(hyper$binary, rep(FALSE, 3))
+  ## outputs are named after the columns of Y (default names here)
+  expect_equal(colnames(hyper$OmegaG), c("V1", "V2", "V3"))
 })
 
 test_that("mvn_extract_hyperparams refuses a non-kappa fit", {

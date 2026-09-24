@@ -86,7 +86,7 @@ test_that("prior = 'rhs_kappa' fits and recovers a known correlation", {
   expect_length(hyper$ltaum, 4)
   expect_true(all(hyper$lsig >= 0))
   Og <- hyper$OmegaG
-  expect_equal(diag(Og), rep(1, 4), tolerance = 1e-6)
+  expect_equal(unname(diag(Og)), rep(1, 4), tolerance = 1e-6)
   expect_true(min(eigen(Og, symmetric = TRUE, only.values = TRUE)$values) > 0)
   expect_true(abs(Og[1, 2] - 0.6) < 0.2)
   ## the other 5 true-zero pairs stay small

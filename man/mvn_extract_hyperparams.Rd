@@ -7,15 +7,17 @@
 mvn_extract_hyperparams(fit)
 }
 \arguments{
-\item{fit}{a stanfit object returned by \code{mvn_infer_mlm_sparse()}}
+\item{fit}{a stanfit from \code{mvn_infer_mlm_sparse()} or
+\code{mvn_infer_mlm_mixed()}}
 }
 \value{
 a list with elements \code{betag} (NP x NV matrix, posterior mean
 of BetaM), \code{sigb} (NP x NV matrix, posterior mean of BetaS),
-\code{ltaum}/\code{lsig} (length-NV vectors, posterior means of the mean
-and SD of log(tau) across studies), \code{OmegaG} (NV x NV matrix,
-posterior mean of Omega_global), \code{model} (\code{"kappa"}, the
-deviation-penalty model) and \code{kappa} (scalar)
+\code{ltaum}/\code{lsig} (posterior means of the mean and SD of
+log(tau) across studies, one per \emph{continuous} variate),
+\code{OmegaG} (NV x NV matrix, posterior mean of Omega_global),
+\code{model} (\code{"kappa"}), \code{kappa} (scalar) and \code{binary}
+(logical, which variates are binary)
 }
 \description{
 Extract global hyperparameter point estimates from a fitted hierarchical
@@ -23,13 +25,13 @@ model
 }
 \details{
 Pulls posterior means (not full posterior draws) of the global
-hyperparameters from a stanfit returned by \code{mvn_infer_mlm_sparse()},
-reshaped to match the argument names \code{mvn_sample_study_kappa()}
-expects. This is a point-estimate plug-in: it collapses the posterior to
-its mean before generating, so a synthetic population built from these
-estimates will understate parameter uncertainty relative to proper
-posterior-predictive generation (drawing a fresh set of hyperparameters
-per posterior draw, not just plugging in one point estimate).
+hyperparameters from a stanfit returned by \code{mvn_infer_mlm_sparse()}
+or \code{mvn_infer_mlm_mixed()}, in the original variable order and
+named, matching the arguments \code{mvn_sample_study_kappa()} expects.
+This is a point-estimate plug-in: it collapses the posterior to its mean,
+so a synthetic population built from these estimates will understate
+parameter uncertainty; \code{mvn_make_generator()} keeps posterior draws
+instead.
 }
 \author{
 Pete Dodd

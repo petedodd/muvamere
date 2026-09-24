@@ -49,11 +49,16 @@ mvn_simulate <- function(X, Beta, Sigma) {
 ##' @param max_tries maximum positive-definiteness rejection-sampling attempts
 ##'   before erroring (default 200; only relevant for kappa large enough that
 ##'   most draws are invalid)
+##' @param binary optional logical vector (one per variate): which variates
+##'   are binary. Binary variates have latent scale 1 and are returned as
+##'   0/1 (latent > 0), as in \code{mvn_infer_mlm_mixed()}; \code{ltaum} and
+##'   \code{lsig} then give the continuous variates only. Default: all
+##'   continuous.
 ##' @return matrix of responses
 ##' @author Pete Dodd
 ##' @export
 mvn_sample_study_kappa <- function(X, betag, sigb, kappa, ltaum, lsig,
-                                   OmegaG, max_tries = 200) {
+                                   OmegaG, max_tries = 200, binary = NULL) {
   ## dimensions
   NV <- ncol(betag)
   ## means
@@ -81,10 +86,16 @@ mvn_sample_study_kappa <- function(X, betag, sigb, kappa, ltaum, lsig,
       )
     }
   }
-  taus <- exp(rnorm(nrow(OmegaG), mean = ltaum, sd = lsig)) # log-normal
-  Sig <- diag(taus) %*% omega %*% diag(taus)
+  if (is.null(binary)) binary <- rep(FALSE, NV)
+  if (length(binary) != NV) stop("'binary' must have one entry per variate")
+  taus <- rep(1, NV) # binary variates: latent scale 1
+  taus[!binary] <- exp(rnorm(sum(!binary), mean = ltaum, sd = lsig))
+  Sig <- diag(taus, NV) %*% omega %*% diag(taus, NV)
   ## samples
-  mvn_simulate(X, betas, Sig)
+  Y <- mvn_simulate(X, betas, Sig)
+  Y[, binary] <- (Y[, binary] > 0) * 1
+  colnames(Y) <- colnames(betag)
+  Y
 }
 
 ##' Simulate responses for a number of studies
@@ -105,6 +116,8 @@ mvn_sample_study_kappa <- function(X, betag, sigb, kappa, ltaum, lsig,
 ##' @param ltaum mean(s) of log(tau) across studies
 ##' @param lsig SD(s) of log(tau) across studies
 ##' @param lkj_global global correlation LKJ prior parameter
+##' @param binary optional logical vector: which variates are binary (see
+##'   \code{mvn_sample_study_kappa()})
 ##' @return a data frame with responses for all studies, with studyno and obsno
 ##'   columns appended; the drawn global correlation matrix is attached as
 ##'   attribute \code{"OmegaG"}
@@ -114,7 +127,7 @@ mvn_sample_study_kappa <- function(X, betag, sigb, kappa, ltaum, lsig,
 mvn_simulate_studies <- function(Xlist,
                                  betag, sigb,
                                  kappa, ltaum, lsig,
-                                 lkj_global) {
+                                 lkj_global, binary = NULL) {
   ## sample globals:
   OmegaG <- trialr::rlkjcorr(1, ncol(betag), lkj_global)
   ## loop over studies
@@ -122,7 +135,8 @@ mvn_simulate_studies <- function(Xlist,
   for (i in seq_along(Xlist)) {
     SS[[i]] <- mvn_sample_study_kappa(
       Xlist[[i]], betag, sigb,
-      kappa, ltaum, lsig, OmegaG
+      kappa, ltaum, lsig, OmegaG,
+      binary = binary
     )
     SS[[i]] <- as.data.frame(SS[[i]])
     SS[[i]]$studyno <- i

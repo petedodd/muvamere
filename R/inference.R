@@ -294,8 +294,9 @@ mvn_extract_predictions <- function(fit) {
 ##'   given, the per-study \code{Omega_s} and \code{Sigs} are not saved
 ##'   (they are derived, unused downstream, and double the fit's size); pass
 ##'   \code{pars = NA} to save every parameter.
-##' @return a Stan sample object carrying an attribute \code{"diagnose"}, the
-##'   \code{mvn_diagnose()} result for this fit (see Details)
+##' @return a Stan sample object carrying attributes \code{"diagnose"}, the
+##'   \code{mvn_diagnose()} result for this fit (see Details), and
+##'   \code{"muvamere"} (variable and covariate names; no record-level data)
 ##' @author Pete Dodd
 ##' @references Piironen J, Vehtari A (2017). Sparsity information and
 ##'   regularization in the horseshoe and other shrinkage priors. Electronic
@@ -319,6 +320,13 @@ mvn_infer_mlm_sparse <- function(Y, X, study,
       "\"horseshoe\") and mvn_infer_mlm() were removed in 2026-09")
   }
   ## prepare data (records sorted by study, see .sort_by_study)
+  Y <- .named(Y, "V")
+  X <- .named(X, "X")
+  if (anyNA(Y) || anyNA(X)) {
+    stop("missing values in Y or X: use mvn_infer_mlm_mixed() for data ",
+      "with missing values")
+  }
+  meta <- .fit_meta(Y, X, rep(FALSE, ncol(Y)), "kappa")
   srt <- .sort_by_study(Y, X, study)
   Y <- srt$Y
   X <- srt$X
@@ -370,5 +378,7 @@ mvn_infer_mlm_sparse <- function(Y, X, study,
     data = shdata, chains = chains, cores = cores, iter = iter,
     init = init
   ), args))
-  .attach_stability_check(fit, "")
+  fit <- .attach_stability_check(fit, "")
+  attr(fit, "muvamere") <- meta
+  fit
 }

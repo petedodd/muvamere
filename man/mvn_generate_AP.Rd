@@ -7,29 +7,33 @@
 mvn_generate_AP(fit, Xlist)
 }
 \arguments{
-\item{fit}{a stanfit object returned by \code{mvn_infer_mlm_sparse()}}
+\item{fit}{a \code{muvamere_generator}, or a stanfit from
+\code{mvn_infer_mlm_sparse()} or \code{mvn_infer_mlm_mixed()}}
 
 \item{Xlist}{list of covariate data matrices, one per synthetic study to
-generate}
+generate, with the same columns as the covariates used in the fit}
 }
 \value{
-a data frame with responses for all generated studies, with studyno
-and obsno columns appended (same format as \code{mvn_simulate_studies()})
+a data frame with responses for all generated studies, columns
+named as the fitted variates, with studyno and obsno columns appended
+(same format as \code{mvn_simulate_studies()})
 }
 \description{
 Generate a synthetic multi-study population from a fitted hierarchical
 model
 }
 \details{
-Plugs posterior-mean hyperparameters (via \code{mvn_extract_hyperparams()})
-into \code{mvn_sample_study_kappa()} for each target design matrix in
-\code{Xlist}. Each call draws a new study-level correlation and per-study
-Betas/taus, so this generates new synthetic cohorts consistent with the
-fitted between-study heterogeneity. Uses posterior means for the global
-hyperparameters; it does not propagate posterior uncertainty in those
-hyperparameters into the generated population. A fuller version should
-draw hyperparameters from the posterior per replicate rather than plugging
-in one point estimate (see the package TODO list).
+Simulates one new study per target design matrix in \code{Xlist}, each
+with its own study-level correlations, regression coefficients and
+scales drawn around the fitted global hyperparameters (so the generated
+cohorts reflect the fitted between-study heterogeneity), via
+\code{mvn_sample_study_kappa()}. Binary variates are returned as 0/1.
+
+Given a \emph{generator} (\code{mvn_make_generator()}), each synthetic
+study uses a different random posterior draw of the global
+hyperparameters, so posterior uncertainty is propagated. Given a
+\emph{fit}, the posterior means are plugged in for every study
+(\code{mvn_extract_hyperparams()}), which understates that uncertainty.
 }
 \author{
 Pete Dodd

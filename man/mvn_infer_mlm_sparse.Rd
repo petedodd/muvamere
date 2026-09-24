@@ -81,8 +81,9 @@ given, the per-study \code{Omega_s} and \code{Sigs} are not saved
 \code{pars = NA} to save every parameter.}
 }
 \value{
-a Stan sample object carrying an attribute \code{"diagnose"}, the
-\code{mvn_diagnose()} result for this fit (see Details)
+a Stan sample object carrying attributes \code{"diagnose"}, the
+\code{mvn_diagnose()} result for this fit (see Details), and
+\code{"muvamere"} (variable and covariate names; no record-level data)
 }
 \description{
 MCMC sampling for data from multiple studies, with sparsity-promoting

@@ -4,7 +4,16 @@
 \alias{mvn_simulate_studies}
 \title{mvn_simulate_studies}
 \usage{
-mvn_simulate_studies(Xlist, betag, sigb, kappa, ltaum, lsig, lkj_global)
+mvn_simulate_studies(
+  Xlist,
+  betag,
+  sigb,
+  kappa,
+  ltaum,
+  lsig,
+  lkj_global,
+  binary = NULL
+)
 }
 \arguments{
 \item{Xlist}{list of covariate data matrices}
@@ -21,6 +30,9 @@ global correlation matrix}
 \item{lsig}{SD(s) of log(tau) across studies}
 
 \item{lkj_global}{global correlation LKJ prior parameter}
+
+\item{binary}{optional logical vector: which variates are binary (see
+\code{mvn_sample_study_kappa()})}
 }
 \value{
 a data frame with responses for all studies, with studyno and obsno
