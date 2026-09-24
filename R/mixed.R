@@ -4,7 +4,7 @@
 ## the user's columns.
 
 ## Metadata attached to every hierarchical fit as attr(fit, "muvamere"):
-## variable names and types in the USER's column order, the permutation to
+## variable names and types in the user's column order, the permutation to
 ## the model's internal order (continuous first), covariate names, and which
 ## Stan model was used. No record-level information.
 .fit_meta <- function(Y, X, binary, model) {
@@ -49,7 +49,7 @@
 }
 
 ## Guard rail: every variable, and every pair of variables, must be jointly
-## observed in at least min_joint records within EVERY study. A variable (or
+## observed in at least min_joint records within every study. A variable (or
 ## pair) with no data in some study leaves that study's correlations
 ## unidentified; in testing this was the main source of divergences, and
 ## supporting it (per-study marginalisation) is out of scope.
@@ -59,13 +59,20 @@
     o <- obs[study == s, , drop = FALSE]
     joint <- crossprod(o * 1) # [NV, NV]: diagonal = per-variable counts
     low <- which(joint < min_joint & upper.tri(joint, diag = TRUE),
-      arr.ind = TRUE)
+      arr.ind = TRUE
+    )
     for (k in seq_len(nrow(low))) {
-      i <- low[k, 1]; j <- low[k, 2]
-      what <- if (i == j) var_names[i] else
+      i <- low[k, 1]
+      j <- low[k, 2]
+      what <- if (i == j) {
+        var_names[i]
+      } else {
         paste0(var_names[i], " & ", var_names[j])
-      problems <- c(problems, sprintf("study %s: %s (%d jointly observed)",
-        s, what, joint[i, j]))
+      }
+      problems <- c(problems, sprintf(
+        "study %s: %s (%d jointly observed)",
+        s, what, joint[i, j]
+      ))
     }
   }
   if (length(problems)) {
@@ -73,7 +80,9 @@
       paste(" ", utils::head(problems, 20), collapse = "\n"),
       if (length(problems) > 20) "\n  ..." else "",
       "\nVariables missing (almost) entirely from a study are not supported;",
-      " drop the variable or the study.", call. = FALSE)
+      " drop the variable or the study.",
+      call. = FALSE
+    )
   }
   invisible(TRUE)
 }
@@ -195,15 +204,19 @@ mvn_infer_mlm_mixed <- function(Y, X, study, binary,
       v <- Y[study == s & obs[, j], j]
       if (length(unique(v)) == 1) {
         warning("binary '", colnames(Y)[j], "' is constant (", v[1],
-          ") within study ", s, call. = FALSE)
+          ") within study ", s,
+          call. = FALSE
+        )
       }
     }
   }
   DR <- choose(NV, 2)
   if (is.null(p0)) p0 <- .default_p0(NV)
   if (!(is.numeric(p0) && length(p0) == 1 && p0 > 0 && p0 < DR)) {
-    stop("p0 must be a single number with 0 < p0 < choose(ncol(Y), 2) = ",
-      DR)
+    stop(
+      "p0 must be a single number with 0 < p0 < choose(ncol(Y), 2) = ",
+      DR
+    )
   }
   if (!(slab_scale > 0 && slab_df > 0)) {
     stop("slab_scale and slab_df must be positive")
@@ -236,14 +249,16 @@ mvn_infer_mlm_mixed <- function(Y, X, study, binary,
       v
     })
     cm <- colMeans(Y[, seq_len(NC), drop = FALSE], na.rm = TRUE)
-    init <- lapply(.rhs_kappa_inits(crude, X, study, chains, slab_scale),
+    init <- lapply(
+      .rhs_kappa_inits(crude, X, study, chains, slab_scale),
       function(l) {
         l$u <- matrix(0.5, nrow(Y), NB)
         if (nrow(miss_c)) {
           l$ymiss <- array(cm[miss_c[, 2]], nrow(miss_c))
         }
         l
-      })
+      }
+    )
   }
   args <- list(...)
   if (is.null(args$pars)) {
