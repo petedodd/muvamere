@@ -4,22 +4,13 @@
 \alias{mvn_generate_AP}
 \title{mvn_generate_AP}
 \usage{
-mvn_generate_AP(fit, Xlist, lkj_local = 3)
+mvn_generate_AP(fit, Xlist)
 }
 \arguments{
-\item{fit}{a stanfit object returned by \code{mvn_infer_mlm()} or
-\code{mvn_infer_mlm_sparse()}}
+\item{fit}{a stanfit object returned by \code{mvn_infer_mlm_sparse()}}
 
 \item{Xlist}{list of covariate data matrices, one per synthetic study to
 generate}
-
-\item{lkj_local}{local correlation LKJ prior parameter for the new studies'
-local correlation draws. Only used for a rho-blend \code{fit} (ignored,
-with a message, for a deviation-penalty \code{fit}, which has no
-equivalent parameter). This is a prior tuning constant that
-\code{mvn_infer_mlm()}/\code{mvn_infer_mlm_sparse()} take as fixed input
-data (not something they estimate a posterior for): reuse the value
-passed to the original fit.}
 }
 \value{
 a data frame with responses for all generated studies, with studyno
@@ -31,15 +22,14 @@ model
 }
 \details{
 Plugs posterior-mean hyperparameters (via \code{mvn_extract_hyperparams()})
-into \code{mvn_sample_study()} (rho-blend fits) or
-\code{mvn_sample_study_kappa()} (deviation-penalty fits) for each target
-design matrix in \code{Xlist}: the two are dispatched automatically based
-on which model \code{fit} came from, see \code{mvn_extract_hyperparams()}.
-Each call draws a new study-level correlation and per-study Betas/taus, so
-this generates new synthetic cohorts consistent with the fitted
-between-study heterogeneity. Uses posterior means for the global
+into \code{mvn_sample_study_kappa()} for each target design matrix in
+\code{Xlist}. Each call draws a new study-level correlation and per-study
+Betas/taus, so this generates new synthetic cohorts consistent with the
+fitted between-study heterogeneity. Uses posterior means for the global
 hyperparameters; it does not propagate posterior uncertainty in those
-hyperparameters into the generated population.
+hyperparameters into the generated population. A fuller version should
+draw hyperparameters from the posterior per replicate rather than plugging
+in one point estimate (see the package TODO list).
 }
 \author{
 Pete Dodd

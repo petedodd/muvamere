@@ -20,23 +20,21 @@ test_that("mvn_simulate output is well-shaped and recovers Beta/Sigma", {
   expect_equal(cov(Y - X %*% Beta), Sigma, tolerance = 0.15)
 })
 
-test_that("mvn_sample_study produces correctly-shaped output", {
+test_that("mvn_sample_study_kappa gives log-normal scales, right shape", {
   set.seed(102)
-  skip_if_not_installed("trialr")
-  Ncovars <- 2
   NV <- 3
-  Npats <- 50
+  Npats <- 4000
   X <- cbind(1, runif(Npats))
-  OmegaG <- trialr::rlkjcorr(1, NV, 2)
-
-  out <- mvn_sample_study(
-    X = X,
-    betag = matrix(1, Ncovars, NV), sigb = matrix(0.01, Ncovars, NV),
-    rho = 0.5, taug = rep(1, NV), sigt = rep(0.1, NV),
-    OmegaG = OmegaG, lkj_local = 3
+  ## kappa = 0 and sigb = 0: the only randomness in scale is log-normal tau,
+  ## and with lsig = 0 every tau is exactly exp(ltaum)
+  out <- mvn_sample_study_kappa(X,
+    betag = matrix(1, 2, NV), sigb = matrix(0, 2, NV), kappa = 0,
+    ltaum = log(c(0.5, 1, 2)), lsig = rep(0, NV), OmegaG = diag(NV)
   )
-
   expect_equal(dim(out), c(Npats, NV))
+  expect_equal(apply(out - X %*% matrix(1, 2, NV), 2, sd), c(0.5, 1, 2),
+    tolerance = 0.05
+  )
 })
 
 test_that("mvn_simulate_studies returns the documented data-frame structure", {
@@ -51,8 +49,7 @@ test_that("mvn_simulate_studies returns the documented data-frame structure", {
   out <- mvn_simulate_studies(
     Xlist,
     betag = matrix(1, Ncovars, NV), sigb = matrix(0.05, Ncovars, NV),
-    rhoA = 2, rhoB = 2, taug = rep(1, NV), sigt = rep(0.2, NV),
-    lkj_local = 3, lkj_global = 2
+    kappa = 0.05, ltaum = rep(0, NV), lsig = rep(0.1, NV), lkj_global = 2
   )
 
   expect_s3_class(out, "data.frame")
@@ -62,15 +59,6 @@ test_that("mvn_simulate_studies returns the documented data-frame structure", {
   expect_equal(as.vector(table(out$studyno)), rep(Npats, Nstudies))
   ## obsno should restart at 1 within each study
   expect_equal(out$obsno[out$studyno == 1], 1:Npats)
-})
-
-test_that(".rtruncnorm0 draws the truncated (not folded) normal for tau", {
-  set.seed(7)
-  ## mean 0.1, sd 1: truncated mean = m + dnorm(m) / pnorm(m); a folded
-  ## normal (the old abs(rnorm()) draw) would give ~0.80 instead
-  x <- muvamere:::.rtruncnorm0(1e5, 0.1, 1)
-  expect_true(all(x > 0))
-  expect_equal(mean(x), 0.1 + dnorm(0.1) / pnorm(0.1), tolerance = 0.01)
-  ## vectorised over mean/sd, one draw per variate
-  expect_length(muvamere:::.rtruncnorm0(3, c(1, 2, 3), 0.1), 3)
+  ## the drawn global correlation is returned as an attribute
+  expect_equal(dim(attr(out, "OmegaG")), c(NV, NV))
 })

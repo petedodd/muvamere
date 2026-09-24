@@ -7,19 +7,15 @@
 mvn_extract_hyperparams(fit)
 }
 \arguments{
-\item{fit}{a stanfit object returned by \code{mvn_infer_mlm()} or
-\code{mvn_infer_mlm_sparse()}}
+\item{fit}{a stanfit object returned by \code{mvn_infer_mlm_sparse()}}
 }
 \value{
-a list with elements \code{model} (\code{"rho"} or \code{"kappa"}),
-\code{betag} (NP x NV matrix, posterior mean of BetaM), \code{sigb} (NP x
-NV matrix, posterior mean of BetaS), \code{OmegaG} (NV x NV matrix,
-posterior mean of Omega_global), and then, depending on \code{model}:
-for \code{"rho"}, \code{taug}/\code{sigt} (length-NV vectors, posterior
-means of taum/sigt, the truncated-normal tau hierarchy) and \code{rho}
-(scalar); for \code{"kappa"}, \code{ltaum}/\code{lsig} (length-NV
-vectors, posterior means of the mean and SD of log(tau), the log-normal
-tau hierarchy) and \code{kappa} (scalar)
+a list with elements \code{betag} (NP x NV matrix, posterior mean
+of BetaM), \code{sigb} (NP x NV matrix, posterior mean of BetaS),
+\code{ltaum}/\code{lsig} (length-NV vectors, posterior means of the mean
+and SD of log(tau) across studies), \code{OmegaG} (NV x NV matrix,
+posterior mean of Omega_global), \code{model} (\code{"kappa"}, the
+deviation-penalty model) and \code{kappa} (scalar)
 }
 \description{
 Extract global hyperparameter point estimates from a fitted hierarchical
@@ -27,22 +23,13 @@ model
 }
 \details{
 Pulls posterior means (not full posterior draws) of the global
-hyperparameters from a stanfit returned by \code{mvn_infer_mlm()} or
-\code{mvn_infer_mlm_sparse()}, reshaped to match the argument names
-\code{mvn_sample_study()}/\code{mvn_sample_study_kappa()} expect. This is a
-point-estimate plug-in: it collapses the posterior to its mean before
-generating, so a synthetic population built from these estimates will
-understate parameter uncertainty relative to proper posterior-predictive
-generation (drawing a fresh set of hyperparameters per posterior draw, not
-just plugging in one point estimate).
-
-Dispatches on which correlation model \code{fit} came from, detected from
-its parameters: a \code{rho} parameter means the rho-blend model
-(\code{mvn_infer_mlm()}, or \code{mvn_infer_mlm_sparse(prior = c("rhs",
-"horseshoe"))}); a \code{kappa} parameter means the deviation-penalty model
-(\code{mvn_infer_mlm_sparse(prior = "rhs_kappa")}).
-\code{mvn_generate_AP()} uses this to pick the matching generative
-mechanism automatically.
+hyperparameters from a stanfit returned by \code{mvn_infer_mlm_sparse()},
+reshaped to match the argument names \code{mvn_sample_study_kappa()}
+expects. This is a point-estimate plug-in: it collapses the posterior to
+its mean before generating, so a synthetic population built from these
+estimates will understate parameter uncertainty relative to proper
+posterior-predictive generation (drawing a fresh set of hyperparameters
+per posterior draw, not just plugging in one point estimate).
 }
 \author{
 Pete Dodd

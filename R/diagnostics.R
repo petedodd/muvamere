@@ -1,5 +1,5 @@
 ## this file contains MCMC convergence diagnostic helpers for stanfits
-## returned by mvn_infer()/mvn_infer_mlm()
+## returned by mvn_infer()/mvn_infer_mlm_sparse()
 
 
 ##' Summarize MCMC convergence diagnostics for a muvamere stanfit
@@ -17,7 +17,7 @@
 ##'
 ##' @title mvn_diagnose
 ##' @param fit a stanfit object, e.g. from
-##'   \code{mvn_infer()}/\code{mvn_infer_mlm()}
+##'   \code{mvn_infer()}/\code{mvn_infer_mlm_sparse()}
 ##' @param rhat_threshold flag as a problem if the max (non-NA) Rhat exceeds
 ##'   this, default 1.01
 ##' @param ess_ratio_threshold flag as a problem if the min (non-NA) effective
@@ -70,7 +70,13 @@ mvn_diagnose <- function(fit, rhat_threshold = 1.01, ess_ratio_threshold = 0.1,
 print.muvamere_diagnostics <- function(x, ...) {
   cat(if (x$ok) "OK: " else "PROBLEMS FOUND: ", "MCMC diagnostics\n", sep = "")
   cat(sprintf(
-    "  Rhat max:        %.4f\n  ESS min:         %.1f (%.1f%% of %d draws)\n  Divergences:     %d\n  Max treedepth:   %d\n  E-BFMI min:      %.3f\n",
+    paste0(
+      "  Rhat max:        %.4f\n",
+      "  ESS min:         %.1f (%.1f%% of %d draws)\n",
+      "  Divergences:     %d\n",
+      "  Max treedepth:   %d\n",
+      "  E-BFMI min:      %.3f\n"
+    ),
     x$rhat_max,
     x$ess_min,
     100 * x$ess_min_ratio, x$n_draws,

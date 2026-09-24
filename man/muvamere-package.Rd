@@ -2,11 +2,16 @@
 % Please edit documentation in R/muvamere-package.R
 \docType{package}
 \name{muvamere-package}
-\alias{muvamere-package}
 \alias{muvamere}
-\title{The 'muvamere' package.}
+\alias{muvamere-package}
+\title{muvamere: MUlti-VAriate MEta-REgression}
 \description{
-A DESCRIPTION OF THE PACKAGE
+Bayesian hierarchical multivariate meta-regression for
+generating synthetic patient populations from pooled individual patient
+data: per-study regressions partially pooled across studies, with a
+sparsity-shrunk global correlation structure that each study's own
+correlations deviate from (see \code{mvn_infer_mlm_sparse()}), and
+generators for new cohorts (\code{mvn_generate_AP()}).
 }
 \references{
 Stan Development Team (NA). RStan: the R interface to Stan. R package
@@ -21,3 +26,4 @@ Authors:
 }
 
 }
+\keyword{internal}

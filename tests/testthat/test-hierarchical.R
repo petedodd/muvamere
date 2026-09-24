@@ -1,100 +1,74 @@
-## tests for mvn_infer_mlm() (hierarchical Stan model) and the R/bridge.R
-## functions built on top of it.
+## tests for the hierarchical model's bookkeeping (mvn_infer_mlm_sparse()) and
+## the R/bridge.R functions built on top of it. (Rewritten 2026-09-24 when
+## the rho-blend mvn_infer_mlm() was removed; same checks, current model.)
 
-test_that("mvn_infer_mlm takes Nstudies from distinct studies, not Nrecords", {
-  skip_on_cran()
-  skip_if_not_installed("trialr")
-  set.seed(301)
-  Nstudies <- 3
-  ## Nrecords = Nstudies * Npats = 75 -- must NOT show up as par_dims$tau[1]
-  Npats <- 25
-  NV <- 2
-  Ncov <- 2
-  Xlist <- replicate(Nstudies, cbind(1, runif(Npats)), simplify = FALSE)
-
+## small multi-study fixture from the package's own simulator
+sim_studies <- function(sizes, NV = 3, seed = 301) {
+  set.seed(seed)
+  Xlist <- lapply(sizes, function(n) cbind(1, runif(n)))
   allsamp <- mvn_simulate_studies(
     Xlist,
-    betag = matrix(1, Ncov, NV), sigb = matrix(0.05, Ncov, NV),
-    rhoA = 2, rhoB = 2, taug = rep(1, NV), sigt = rep(0.2, NV),
-    lkj_local = 3, lkj_global = 2
+    betag = matrix(1, 2, NV), sigb = matrix(0.05, 2, NV),
+    kappa = 0.05, ltaum = rep(0, NV), lsig = rep(0.1, NV), lkj_global = 2
   )
-  expect_equal(
-    nrow(allsamp), Nstudies * Npats
-  ) # sanity check on the fixture itself
+  list(Y = as.matrix(allsamp[, 1:NV]), X = do.call(rbind, Xlist),
+    study = allsamp$studyno)
+}
 
-  fit <- suppressWarnings(mvn_infer_mlm(
-    Y = as.matrix(allsamp[, 1:NV]), X = do.call(rbind, Xlist),
-    study = allsamp$studyno, iter = 300, chains = 1, cores = 1, refresh = 0
+test_that("Nstudies comes from distinct studies, not Nrecords", {
+  skip_on_cran()
+  skip_if_not_installed("trialr")
+  ## Nrecords = 3 * 25 = 75 -- must NOT show up as a per-study dimension
+  d <- sim_studies(rep(25, 3))
+  expect_equal(nrow(d$Y), 75) # sanity check on the fixture itself
+  fit <- suppressWarnings(mvn_infer_mlm_sparse(d$Y, d$X, d$study,
+    iter = 300, chains = 1, cores = 1, refresh = 0
   ))
-
-  expect_equal(fit@par_dims$tau, c(Nstudies, NV))
-  expect_equal(fit@par_dims$Omega_local, c(Nstudies, NV, NV))
-  expect_equal(fit@par_dims$Betas, c(Nstudies, Ncov, NV))
+  expect_equal(fit@par_dims$tau, c(3, 3))
+  expect_equal(fit@par_dims$rr, c(3, 3))
+  expect_equal(fit@par_dims$Betas, c(3, 2, 3))
 })
 
 test_that("mvn_extract_hyperparams gives correctly (re)shaped hyperparams", {
   skip_on_cran()
   skip_if_not_installed("trialr")
-  set.seed(302)
-  Nstudies <- 3
-  Npats <- 25
-  NV <- 2
-  Ncov <- 2
-  Xlist <- replicate(Nstudies, cbind(1, runif(Npats)), simplify = FALSE)
-  allsamp <- mvn_simulate_studies(
-    Xlist,
-    betag = matrix(1, Ncov, NV), sigb = matrix(0.05, Ncov, NV),
-    rhoA = 2, rhoB = 2, taug = rep(1, NV), sigt = rep(0.2, NV),
-    lkj_local = 3, lkj_global = 2
-  )
-  fit <- suppressWarnings(mvn_infer_mlm(
-    Y = as.matrix(allsamp[, 1:NV]), X = do.call(rbind, Xlist),
-    study = allsamp$studyno, iter = 300, chains = 1, cores = 1, refresh = 0
+  d <- sim_studies(rep(25, 3), seed = 302)
+  fit <- suppressWarnings(mvn_infer_mlm_sparse(d$Y, d$X, d$study,
+    iter = 300, chains = 1, cores = 1, refresh = 0
   ))
-
   hyper <- mvn_extract_hyperparams(fit)
-
-  ## "model" was added 2026-09-23 so callers can dispatch between the rho-blend
-  ## and deviation-penalty (kappa) sparse models -- see
-  ## mvn_infer_mlm_sparse(prior = "rhs_kappa")
   expect_named(
-    hyper, c("betag", "sigb", "taug", "sigt", "OmegaG", "model", "rho")
+    hyper, c("betag", "sigb", "ltaum", "lsig", "OmegaG", "model", "kappa")
   )
-  expect_equal(hyper$model, "rho")
-  expect_equal(dim(hyper$betag), c(Ncov, NV))
-  expect_equal(dim(hyper$sigb), c(Ncov, NV))
-  expect_length(hyper$taug, NV)
-  expect_length(hyper$sigt, NV)
-  expect_length(hyper$rho, 1)
-  expect_true(hyper$rho >= 0 && hyper$rho <= 1)
-  expect_equal(dim(hyper$OmegaG), c(NV, NV))
+  expect_equal(hyper$model, "kappa")
+  expect_equal(dim(hyper$betag), c(2, 3))
+  expect_equal(dim(hyper$sigb), c(2, 3))
+  expect_length(hyper$ltaum, 3)
+  expect_length(hyper$lsig, 3)
+  expect_length(hyper$kappa, 1)
+  expect_true(hyper$kappa >= 0)
+  expect_equal(dim(hyper$OmegaG), c(3, 3))
   ## a correlation matrix
-  expect_equal(diag(hyper$OmegaG), rep(1, NV), tolerance = 1e-6)
+  expect_equal(diag(hyper$OmegaG), rep(1, 3), tolerance = 1e-6)
+})
+
+test_that("mvn_extract_hyperparams refuses a non-kappa fit", {
+  ## minimal stand-in with a par_dims slot, as a (removed) rho-blend fit had
+  methods::setClass("fakefit", representation(par_dims = "list"))
+  fake <- methods::new("fakefit", par_dims = list(rho = integer(0)))
+  expect_error(mvn_extract_hyperparams(fake), "no kappa parameter")
 })
 
 test_that("mvn_generate_AP output matches mvn_simulate_studies format", {
   skip_on_cran()
   skip_if_not_installed("trialr")
-  set.seed(303)
-  Nstudies <- 3
-  Npats <- 25
-  NV <- 2
-  Ncov <- 2
-  Xlist <- replicate(Nstudies, cbind(1, runif(Npats)), simplify = FALSE)
-  allsamp <- mvn_simulate_studies(
-    Xlist,
-    betag = matrix(1, Ncov, NV), sigb = matrix(0.05, Ncov, NV),
-    rhoA = 2, rhoB = 2, taug = rep(1, NV), sigt = rep(0.2, NV),
-    lkj_local = 3, lkj_global = 2
-  )
-  fit <- suppressWarnings(mvn_infer_mlm(
-    Y = as.matrix(allsamp[, 1:NV]), X = do.call(rbind, Xlist),
-    study = allsamp$studyno, iter = 300, chains = 1, cores = 1, refresh = 0
+  d <- sim_studies(rep(25, 3), seed = 303)
+  fit <- suppressWarnings(mvn_infer_mlm_sparse(d$Y, d$X, d$study,
+    iter = 300, chains = 1, cores = 1, refresh = 0
   ))
-
-  ## generate for a different (here: same-shaped) set of target studies
+  ## generate for a different set of target studies
   Xtarget <- replicate(2, cbind(1, runif(10)), simplify = FALSE)
-  AP <- mvn_generate_AP(fit, Xtarget, lkj_local = 3)
+  AP <- mvn_generate_AP(fit, Xtarget)
 
   expect_s3_class(AP, "data.frame")
   expect_equal(nrow(AP), 20)
@@ -104,8 +78,8 @@ test_that("mvn_generate_AP output matches mvn_simulate_studies format", {
 })
 
 
-## the hierarchical Stan models evaluate the likelihood study-by-study and need
-## records sorted by study; the R wrappers sort via .sort_by_study().
+## the hierarchical Stan model evaluates the likelihood study-by-study and
+## needs records sorted by study; the R wrapper sorts via .sort_by_study().
 
 test_that(".sort_by_study makes contiguous study blocks, relabels ids 1..S", {
   Y <- cbind(a = 1:6, b = 11:16)
@@ -121,40 +95,34 @@ test_that(".sort_by_study makes contiguous study blocks, relabels ids 1..S", {
   )
 })
 
-test_that("mvn_infer_mlm gives the same fit whatever the record order", {
+test_that("record order does not change the mvn_infer_mlm_sparse fit", {
   skip_on_cran()
   skip_if_not_installed("trialr")
-  set.seed(302)
-  NV <- 2; Ncov <- 2
-  Xlist <- list(cbind(1, runif(20)), cbind(1, runif(35)))
-  allsamp <- mvn_simulate_studies(
-    Xlist,
-    betag = matrix(1, Ncov, NV), sigb = matrix(0.05, Ncov, NV),
-    rhoA = 2, rhoB = 2, taug = rep(1, NV), sigt = rep(0.2, NV),
-    lkj_local = 3, lkj_global = 2
-  )
-  Y <- as.matrix(allsamp[, 1:NV])
-  X <- do.call(rbind, Xlist)
-  st <- allsamp$studyno
+  d <- sim_studies(c(20, 35), NV = 2, seed = 304)
+  st <- d$study
   ## interleave the studies but keep each study's own record order, so that
   ## after sorting the data are bitwise identical
   perm <- order(
     ave(seq_along(st), st, FUN = seq_along) + runif(length(st), 0, 0.5)
   )
-  expect_false(is.unsorted(perm) == FALSE) # fixture really is reordered
-  fit1 <- suppressWarnings(mvn_infer_mlm(
-    Y, X, st,
-    iter = 200, chains = 1, cores = 1, refresh = 0, seed = 5
+  expect_true(is.unsorted(st[perm])) # fixture really is reordered
+  ## identical inits: the wrapper would draw its jittered inits from R's RNG
+  set.seed(9)
+  ini <- muvamere:::.rhs_kappa_inits(d$Y, d$X, st, chains = 1,
+    slab_scale = 0.5
+  )
+  fit1 <- suppressWarnings(mvn_infer_mlm_sparse(d$Y, d$X, st,
+    init = ini, iter = 200, chains = 1, cores = 1, refresh = 0, seed = 5
   ))
-  fit2 <- suppressWarnings(mvn_infer_mlm(
-    Y[perm, ], X[perm, ], st[perm],
-    iter = 200, chains = 1, cores = 1, refresh = 0, seed = 5
+  fit2 <- suppressWarnings(mvn_infer_mlm_sparse(
+    d$Y[perm, ], d$X[perm, ], st[perm],
+    init = ini, iter = 200, chains = 1, cores = 1, refresh = 0, seed = 5
   ))
   ## identical data after sorting, same seed => identical draws
   ## (permuted=FALSE: the default permuted=TRUE shuffles draws with R's RNG,
   ## which would differ)
   expect_equal(
-    rstan::extract(fit1, pars = "rho", permuted = FALSE),
-    rstan::extract(fit2, pars = "rho", permuted = FALSE)
+    rstan::extract(fit1, pars = "kappa", permuted = FALSE),
+    rstan::extract(fit2, pars = "kappa", permuted = FALSE)
   )
 })

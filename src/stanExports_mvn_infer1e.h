@@ -27,21 +27,29 @@ namespace model_mvn_infer1e_namespace {
 using stan::model::model_base_crtp;
 using namespace stan::math;
 stan::math::profile_map profiles__;
-static constexpr std::array<const char*, 40> locations_array__ =
+static constexpr std::array<const char*, 54> locations_array__ =
   {" (found before start of program)",
-  " (in 'mvn_infer1e', line 14, column 2 to column 35)",
-  " (in 'mvn_infer1e', line 15, column 2 to column 47)",
-  " (in 'mvn_infer1e', line 16, column 2 to column 21)",
-  " (in 'mvn_infer1e', line 19, column 2 to column 32)",
-  " (in 'mvn_infer1e', line 20, column 2 to column 57)",
-  " (in 'mvn_infer1e', line 21, column 2 to column 53)",
-  " (in 'mvn_infer1e', line 22, column 2 to column 32)",
-  " (in 'mvn_infer1e', line 23, column 2 to column 54)",
-  " (in 'mvn_infer1e', line 34, column 2 to column 32)",
-  " (in 'mvn_infer1e', line 27, column 2 to column 47)",
-  " (in 'mvn_infer1e', line 28, column 2 to column 45)",
-  " (in 'mvn_infer1e', line 30, column 2 to column 30)",
-  " (in 'mvn_infer1e', line 31, column 2 to column 42)",
+  " (in 'mvn_infer1e', line 19, column 2 to column 35)",
+  " (in 'mvn_infer1e', line 20, column 2 to column 47)",
+  " (in 'mvn_infer1e', line 21, column 2 to column 21)",
+  " (in 'mvn_infer1e', line 24, column 2 to column 32)",
+  " (in 'mvn_infer1e', line 25, column 2 to column 57)",
+  " (in 'mvn_infer1e', line 27, column 2 to column 53)",
+  " (in 'mvn_infer1e', line 28, column 2 to column 32)",
+  " (in 'mvn_infer1e', line 30, column 2 to column 54)",
+  " (in 'mvn_infer1e', line 42, column 2 to column 32)",
+  " (in 'mvn_infer1e', line 47, column 2 to column 25)",
+  " (in 'mvn_infer1e', line 50, column 11 to column 17)",
+  " (in 'mvn_infer1e', line 50, column 18 to column 20)",
+  " (in 'mvn_infer1e', line 50, column 4 to column 39)",
+  " (in 'mvn_infer1e', line 52, column 6 to column 57)",
+  " (in 'mvn_infer1e', line 51, column 22 to line 53, column 5)",
+  " (in 'mvn_infer1e', line 51, column 4 to line 53, column 5)",
+  " (in 'mvn_infer1e', line 48, column 2 to line 54, column 3)",
+  " (in 'mvn_infer1e', line 34, column 2 to column 47)",
+  " (in 'mvn_infer1e', line 35, column 2 to column 45)",
+  " (in 'mvn_infer1e', line 37, column 2 to column 30)",
+  " (in 'mvn_infer1e', line 38, column 2 to column 42)",
   " (in 'mvn_infer1e', line 2, column 2 to column 11)",
   " (in 'mvn_infer1e', line 3, column 2 to column 9)",
   " (in 'mvn_infer1e', line 4, column 2 to column 9)",
@@ -54,20 +62,26 @@ static constexpr std::array<const char*, 40> locations_array__ =
   " (in 'mvn_infer1e', line 7, column 2 to column 21)",
   " (in 'mvn_infer1e', line 8, column 2 to column 20)",
   " (in 'mvn_infer1e', line 9, column 2 to column 23)",
-  " (in 'mvn_infer1e', line 14, column 23 to column 25)",
-  " (in 'mvn_infer1e', line 15, column 34 to column 36)",
-  " (in 'mvn_infer1e', line 16, column 9 to column 11)",
-  " (in 'mvn_infer1e', line 16, column 12 to column 14)",
-  " (in 'mvn_infer1e', line 19, column 9 to column 13)",
-  " (in 'mvn_infer1e', line 19, column 14 to column 16)",
-  " (in 'mvn_infer1e', line 20, column 18 to column 20)",
+  " (in 'mvn_infer1e', line 10, column 2 to column 13)",
+  " (in 'mvn_infer1e', line 14, column 9 to column 15)",
+  " (in 'mvn_infer1e', line 14, column 16 to column 18)",
+  " (in 'mvn_infer1e', line 14, column 2 to column 22)",
+  " (in 'mvn_infer1e', line 19, column 23 to column 25)",
+  " (in 'mvn_infer1e', line 20, column 34 to column 36)",
   " (in 'mvn_infer1e', line 21, column 9 to column 11)",
-  " (in 'mvn_infer1e', line 21, column 13 to column 15)",
-  " (in 'mvn_infer1e', line 22, column 9 to column 13)",
-  " (in 'mvn_infer1e', line 22, column 14 to column 16)",
-  " (in 'mvn_infer1e', line 23, column 9 to column 11)",
-  " (in 'mvn_infer1e', line 23, column 12 to column 16)",
-  " (in 'mvn_infer1e', line 34, column 13 to column 15)"};
+  " (in 'mvn_infer1e', line 21, column 12 to column 14)",
+  " (in 'mvn_infer1e', line 24, column 9 to column 13)",
+  " (in 'mvn_infer1e', line 24, column 14 to column 16)",
+  " (in 'mvn_infer1e', line 25, column 18 to column 20)",
+  " (in 'mvn_infer1e', line 27, column 9 to column 11)",
+  " (in 'mvn_infer1e', line 27, column 13 to column 15)",
+  " (in 'mvn_infer1e', line 28, column 9 to column 13)",
+  " (in 'mvn_infer1e', line 28, column 14 to column 16)",
+  " (in 'mvn_infer1e', line 30, column 9 to column 11)",
+  " (in 'mvn_infer1e', line 30, column 12 to column 16)",
+  " (in 'mvn_infer1e', line 42, column 13 to column 15)",
+  " (in 'mvn_infer1e', line 47, column 9 to column 15)",
+  " (in 'mvn_infer1e', line 47, column 16 to column 18)"};
 #include <stan_meta_header.hpp>
 class model_mvn_infer1e final : public model_base_crtp<model_mvn_infer1e> {
 private:
@@ -79,8 +93,11 @@ private:
   double beta_prior_sd;
   double tau_prior_sd;
   double lkj_prior_scale;
+  int NewObs;
+  Eigen::Matrix<double,-1,-1> Z_data__;
   Eigen::Map<Eigen::Matrix<double,-1,-1>> X{nullptr, 0, 0};
   Eigen::Map<Eigen::Matrix<double,-1,-1>> Y{nullptr, 0, 0};
+  Eigen::Map<Eigen::Matrix<double,-1,-1>> Z{nullptr, 0, 0};
 public:
   ~model_mvn_infer1e() {}
   model_mvn_infer1e(stan::io::var_context& context__, unsigned int
@@ -102,29 +119,29 @@ public:
     try {
       int pos__ = std::numeric_limits<int>::min();
       pos__ = 1;
-      current_statement__ = 14;
+      current_statement__ = 22;
       context__.validate_dims("data initialization", "Nobs", "int",
         std::vector<size_t>{});
       Nobs = std::numeric_limits<int>::min();
-      current_statement__ = 14;
+      current_statement__ = 22;
       Nobs = context__.vals_i("Nobs")[(1 - 1)];
-      current_statement__ = 15;
+      current_statement__ = 23;
       context__.validate_dims("data initialization", "NP", "int",
         std::vector<size_t>{});
       NP = std::numeric_limits<int>::min();
-      current_statement__ = 15;
+      current_statement__ = 23;
       NP = context__.vals_i("NP")[(1 - 1)];
-      current_statement__ = 16;
+      current_statement__ = 24;
       context__.validate_dims("data initialization", "NV", "int",
         std::vector<size_t>{});
       NV = std::numeric_limits<int>::min();
-      current_statement__ = 16;
+      current_statement__ = 24;
       NV = context__.vals_i("NV")[(1 - 1)];
-      current_statement__ = 17;
+      current_statement__ = 25;
       stan::math::validate_non_negative_index("X", "Nobs", Nobs);
-      current_statement__ = 18;
+      current_statement__ = 26;
       stan::math::validate_non_negative_index("X", "NP", NP);
-      current_statement__ = 19;
+      current_statement__ = 27;
       context__.validate_dims("data initialization", "X", "double",
         std::vector<size_t>{static_cast<size_t>(Nobs),
           static_cast<size_t>(NP)});
@@ -134,28 +151,28 @@ public:
         NP);
       {
         std::vector<local_scalar_t__> X_flat__;
-        current_statement__ = 19;
+        current_statement__ = 27;
         X_flat__ = context__.vals_r("X");
-        current_statement__ = 19;
+        current_statement__ = 27;
         pos__ = 1;
-        current_statement__ = 19;
+        current_statement__ = 27;
         for (int sym1__ = 1; sym1__ <= NP; ++sym1__) {
-          current_statement__ = 19;
+          current_statement__ = 27;
           for (int sym2__ = 1; sym2__ <= Nobs; ++sym2__) {
-            current_statement__ = 19;
+            current_statement__ = 27;
             stan::model::assign(X, X_flat__[(pos__ - 1)],
               "assigning variable X", stan::model::index_uni(sym2__),
               stan::model::index_uni(sym1__));
-            current_statement__ = 19;
+            current_statement__ = 27;
             pos__ = (pos__ + 1);
           }
         }
       }
-      current_statement__ = 20;
+      current_statement__ = 28;
       stan::math::validate_non_negative_index("Y", "Nobs", Nobs);
-      current_statement__ = 21;
+      current_statement__ = 29;
       stan::math::validate_non_negative_index("Y", "NV", NV);
-      current_statement__ = 22;
+      current_statement__ = 30;
       context__.validate_dims("data initialization", "Y", "double",
         std::vector<size_t>{static_cast<size_t>(Nobs),
           static_cast<size_t>(NV)});
@@ -165,73 +182,114 @@ public:
         NV);
       {
         std::vector<local_scalar_t__> Y_flat__;
-        current_statement__ = 22;
+        current_statement__ = 30;
         Y_flat__ = context__.vals_r("Y");
-        current_statement__ = 22;
+        current_statement__ = 30;
         pos__ = 1;
-        current_statement__ = 22;
+        current_statement__ = 30;
         for (int sym1__ = 1; sym1__ <= NV; ++sym1__) {
-          current_statement__ = 22;
+          current_statement__ = 30;
           for (int sym2__ = 1; sym2__ <= Nobs; ++sym2__) {
-            current_statement__ = 22;
+            current_statement__ = 30;
             stan::model::assign(Y, Y_flat__[(pos__ - 1)],
               "assigning variable Y", stan::model::index_uni(sym2__),
               stan::model::index_uni(sym1__));
-            current_statement__ = 22;
+            current_statement__ = 30;
             pos__ = (pos__ + 1);
           }
         }
       }
-      current_statement__ = 23;
+      current_statement__ = 31;
       context__.validate_dims("data initialization", "beta_prior_sd",
         "double", std::vector<size_t>{});
       beta_prior_sd = std::numeric_limits<double>::quiet_NaN();
-      current_statement__ = 23;
+      current_statement__ = 31;
       beta_prior_sd = context__.vals_r("beta_prior_sd")[(1 - 1)];
-      current_statement__ = 24;
+      current_statement__ = 32;
       context__.validate_dims("data initialization", "tau_prior_sd",
         "double", std::vector<size_t>{});
       tau_prior_sd = std::numeric_limits<double>::quiet_NaN();
-      current_statement__ = 24;
+      current_statement__ = 32;
       tau_prior_sd = context__.vals_r("tau_prior_sd")[(1 - 1)];
-      current_statement__ = 25;
+      current_statement__ = 33;
       context__.validate_dims("data initialization", "lkj_prior_scale",
         "double", std::vector<size_t>{});
       lkj_prior_scale = std::numeric_limits<double>::quiet_NaN();
-      current_statement__ = 25;
-      lkj_prior_scale = context__.vals_r("lkj_prior_scale")[(1 - 1)];
-      current_statement__ = 26;
-      stan::math::validate_non_negative_index("L_Omega", "NV", NV);
-      current_statement__ = 26;
-      stan::math::validate_non_negative_index("L_Omega", "NV", NV);
-      current_statement__ = 27;
-      stan::math::validate_non_negative_index("tau_unif", "NV", NV);
-      current_statement__ = 28;
-      stan::math::validate_non_negative_index("Beta", "NP", NP);
-      current_statement__ = 29;
-      stan::math::validate_non_negative_index("Beta", "NV", NV);
-      current_statement__ = 30;
-      stan::math::validate_non_negative_index("mu", "Nobs", Nobs);
-      current_statement__ = 31;
-      stan::math::validate_non_negative_index("mu", "NV", NV);
-      current_statement__ = 32;
-      stan::math::validate_non_negative_index("tau", "NV", NV);
       current_statement__ = 33;
-      stan::math::validate_non_negative_index("L", "NV", NV);
+      lkj_prior_scale = context__.vals_r("lkj_prior_scale")[(1 - 1)];
       current_statement__ = 34;
-      stan::math::validate_non_negative_index("L", "NV", NV);
+      context__.validate_dims("data initialization", "NewObs", "int",
+        std::vector<size_t>{});
+      NewObs = std::numeric_limits<int>::min();
+      current_statement__ = 34;
+      NewObs = context__.vals_i("NewObs")[(1 - 1)];
       current_statement__ = 35;
-      stan::math::validate_non_negative_index("Yresid", "Nobs", Nobs);
+      stan::math::validate_non_negative_index("Z", "NewObs", NewObs);
       current_statement__ = 36;
-      stan::math::validate_non_negative_index("Yresid", "NV", NV);
+      stan::math::validate_non_negative_index("Z", "NP", NP);
       current_statement__ = 37;
-      stan::math::validate_non_negative_index("z", "NV", NV);
+      context__.validate_dims("data initialization", "Z", "double",
+        std::vector<size_t>{static_cast<size_t>(NewObs),
+          static_cast<size_t>(NP)});
+      Z_data__ = Eigen::Matrix<double,-1,-1>::Constant(NewObs, NP,
+                   std::numeric_limits<double>::quiet_NaN());
+      new (&Z) Eigen::Map<Eigen::Matrix<double,-1,-1>>(Z_data__.data(),
+        NewObs, NP);
+      {
+        std::vector<local_scalar_t__> Z_flat__;
+        current_statement__ = 37;
+        Z_flat__ = context__.vals_r("Z");
+        current_statement__ = 37;
+        pos__ = 1;
+        current_statement__ = 37;
+        for (int sym1__ = 1; sym1__ <= NP; ++sym1__) {
+          current_statement__ = 37;
+          for (int sym2__ = 1; sym2__ <= NewObs; ++sym2__) {
+            current_statement__ = 37;
+            stan::model::assign(Z, Z_flat__[(pos__ - 1)],
+              "assigning variable Z", stan::model::index_uni(sym2__),
+              stan::model::index_uni(sym1__));
+            current_statement__ = 37;
+            pos__ = (pos__ + 1);
+          }
+        }
+      }
       current_statement__ = 38;
+      stan::math::validate_non_negative_index("L_Omega", "NV", NV);
+      current_statement__ = 38;
+      stan::math::validate_non_negative_index("L_Omega", "NV", NV);
+      current_statement__ = 39;
+      stan::math::validate_non_negative_index("tau_unif", "NV", NV);
+      current_statement__ = 40;
+      stan::math::validate_non_negative_index("Beta", "NP", NP);
+      current_statement__ = 41;
+      stan::math::validate_non_negative_index("Beta", "NV", NV);
+      current_statement__ = 42;
+      stan::math::validate_non_negative_index("mu", "Nobs", Nobs);
+      current_statement__ = 43;
+      stan::math::validate_non_negative_index("mu", "NV", NV);
+      current_statement__ = 44;
+      stan::math::validate_non_negative_index("tau", "NV", NV);
+      current_statement__ = 45;
+      stan::math::validate_non_negative_index("L", "NV", NV);
+      current_statement__ = 46;
+      stan::math::validate_non_negative_index("L", "NV", NV);
+      current_statement__ = 47;
+      stan::math::validate_non_negative_index("Yresid", "Nobs", Nobs);
+      current_statement__ = 48;
+      stan::math::validate_non_negative_index("Yresid", "NV", NV);
+      current_statement__ = 49;
+      stan::math::validate_non_negative_index("z", "NV", NV);
+      current_statement__ = 50;
       stan::math::validate_non_negative_index("z", "Nobs", Nobs);
-      current_statement__ = 39;
+      current_statement__ = 51;
       stan::math::validate_non_negative_index("Sigma", "NV", NV);
-      current_statement__ = 39;
+      current_statement__ = 51;
       stan::math::validate_non_negative_index("Sigma", "NV", NV);
+      current_statement__ = 52;
+      stan::math::validate_non_negative_index("Ynew", "NewObs", NewObs);
+      current_statement__ = 53;
+      stan::math::validate_non_negative_index("Ynew", "NV", NV);
     } catch (const std::exception& e) {
       stan::lang::rethrow_located(e, locations_array__[current_statement__]);
     }
@@ -314,16 +372,16 @@ public:
       current_statement__ = 5;
       stan::math::check_greater_or_equal(function__, "tau", tau, 0);
       {
-        current_statement__ = 10;
+        current_statement__ = 18;
         lp_accum__.add(stan::math::lkj_corr_cholesky_lpdf<propto__>(L_Omega,
                          lkj_prior_scale));
-        current_statement__ = 11;
+        current_statement__ = 19;
         lp_accum__.add(stan::math::normal_lpdf<propto__>(
                          stan::math::to_vector(Beta), 0, beta_prior_sd));
-        current_statement__ = 12;
+        current_statement__ = 20;
         lp_accum__.add(stan::math::std_normal_lpdf<propto__>(
                          stan::math::to_vector(z)));
-        current_statement__ = 13;
+        current_statement__ = 21;
         lp_accum__.add((-Nobs *
           stan::math::sum(stan::math::log(stan::math::diagonal(L)))));
       }
@@ -443,9 +501,36 @@ public:
       stan::model::assign(Sigma,
         stan::math::multiply(L, stan::math::transpose(L)),
         "assigning variable Sigma");
+      Eigen::Matrix<double,-1,-1> Ynew =
+        Eigen::Matrix<double,-1,-1>::Constant(NewObs, NV,
+          std::numeric_limits<double>::quiet_NaN());
+      {
+        current_statement__ = 11;
+        stan::math::validate_non_negative_index("munew", "NewObs", NewObs);
+        current_statement__ = 12;
+        stan::math::validate_non_negative_index("munew", "NV", NV);
+        Eigen::Matrix<double,-1,-1> munew =
+          Eigen::Matrix<double,-1,-1>::Constant(NewObs, NV,
+            std::numeric_limits<double>::quiet_NaN());
+        current_statement__ = 13;
+        stan::model::assign(munew, stan::math::multiply(Z, Beta),
+          "assigning variable munew");
+        current_statement__ = 16;
+        for (int n = 1; n <= NewObs; ++n) {
+          current_statement__ = 14;
+          stan::model::assign(Ynew,
+            stan::math::transpose(
+              stan::math::multi_normal_cholesky_rng(
+                stan::math::transpose(
+                  stan::model::rvalue(munew, "munew",
+                    stan::model::index_uni(n))), L, base_rng__)),
+            "assigning variable Ynew", stan::model::index_uni(n));
+        }
+      }
       current_statement__ = 9;
       stan::math::check_cov_matrix(function__, "Sigma", Sigma);
       out__.write(Sigma);
+      out__.write(Ynew);
     } catch (const std::exception& e) {
       stan::lang::rethrow_located(e, locations_array__[current_statement__]);
     }
@@ -591,7 +676,7 @@ public:
       names__.insert(names__.end(), temp.begin(), temp.end());
     }
     if (emit_generated_quantities__) {
-      std::vector<std::string> temp{"Sigma"};
+      std::vector<std::string> temp{"Sigma", "Ynew"};
       names__.reserve(names__.size() + temp.size());
       names__.insert(names__.end(), temp.begin(), temp.end());
     }
@@ -624,6 +709,8 @@ public:
     if (emit_generated_quantities__) {
       std::vector<std::vector<size_t>>
         temp{std::vector<size_t>{static_cast<size_t>(NV),
+               static_cast<size_t>(NV)},
+             std::vector<size_t>{static_cast<size_t>(NewObs),
                static_cast<size_t>(NV)}};
       dimss__.reserve(dimss__.size() + temp.size());
       dimss__.insert(dimss__.end(), temp.begin(), temp.end());
@@ -686,6 +773,12 @@ public:
             std::to_string(sym2__) + '.' + std::to_string(sym1__));
         }
       }
+      for (int sym1__ = 1; sym1__ <= NV; ++sym1__) {
+        for (int sym2__ = 1; sym2__ <= NewObs; ++sym2__) {
+          param_names__.emplace_back(std::string() + "Ynew" + '.' +
+            std::to_string(sym2__) + '.' + std::to_string(sym1__));
+        }
+      }
     }
   }
   inline void
@@ -741,13 +834,19 @@ public:
         param_names__.emplace_back(std::string() + "Sigma" + '.' +
           std::to_string(sym1__));
       }
+      for (int sym1__ = 1; sym1__ <= NV; ++sym1__) {
+        for (int sym2__ = 1; sym2__ <= NewObs; ++sym2__) {
+          param_names__.emplace_back(std::string() + "Ynew" + '.' +
+            std::to_string(sym2__) + '.' + std::to_string(sym1__));
+        }
+      }
     }
   }
   inline std::string get_constrained_sizedtypes() const {
-    return std::string("[{\"name\":\"L_Omega\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(NV) + ",\"cols\":" + std::to_string(NV) + "},\"block\":\"parameters\"},{\"name\":\"tau_unif\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(NV) + "},\"block\":\"parameters\"},{\"name\":\"Beta\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(NP) + ",\"cols\":" + std::to_string(NV) + "},\"block\":\"parameters\"},{\"name\":\"mu\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(Nobs) + ",\"cols\":" + std::to_string(NV) + "},\"block\":\"transformed_parameters\"},{\"name\":\"tau\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(NV) + "},\"block\":\"transformed_parameters\"},{\"name\":\"L\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(NV) + ",\"cols\":" + std::to_string(NV) + "},\"block\":\"transformed_parameters\"},{\"name\":\"Yresid\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(Nobs) + ",\"cols\":" + std::to_string(NV) + "},\"block\":\"transformed_parameters\"},{\"name\":\"z\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(NV) + ",\"cols\":" + std::to_string(Nobs) + "},\"block\":\"transformed_parameters\"},{\"name\":\"Sigma\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(NV) + ",\"cols\":" + std::to_string(NV) + "},\"block\":\"generated_quantities\"}]");
+    return std::string("[{\"name\":\"L_Omega\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(NV) + ",\"cols\":" + std::to_string(NV) + "},\"block\":\"parameters\"},{\"name\":\"tau_unif\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(NV) + "},\"block\":\"parameters\"},{\"name\":\"Beta\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(NP) + ",\"cols\":" + std::to_string(NV) + "},\"block\":\"parameters\"},{\"name\":\"mu\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(Nobs) + ",\"cols\":" + std::to_string(NV) + "},\"block\":\"transformed_parameters\"},{\"name\":\"tau\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(NV) + "},\"block\":\"transformed_parameters\"},{\"name\":\"L\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(NV) + ",\"cols\":" + std::to_string(NV) + "},\"block\":\"transformed_parameters\"},{\"name\":\"Yresid\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(Nobs) + ",\"cols\":" + std::to_string(NV) + "},\"block\":\"transformed_parameters\"},{\"name\":\"z\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(NV) + ",\"cols\":" + std::to_string(Nobs) + "},\"block\":\"transformed_parameters\"},{\"name\":\"Sigma\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(NV) + ",\"cols\":" + std::to_string(NV) + "},\"block\":\"generated_quantities\"},{\"name\":\"Ynew\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(NewObs) + ",\"cols\":" + std::to_string(NV) + "},\"block\":\"generated_quantities\"}]");
   }
   inline std::string get_unconstrained_sizedtypes() const {
-    return std::string("[{\"name\":\"L_Omega\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(((NV * (NV - 1)) /2)) + "},\"block\":\"parameters\"},{\"name\":\"tau_unif\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(NV) + "},\"block\":\"parameters\"},{\"name\":\"Beta\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(NP) + ",\"cols\":" + std::to_string(NV) + "},\"block\":\"parameters\"},{\"name\":\"mu\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(Nobs) + ",\"cols\":" + std::to_string(NV) + "},\"block\":\"transformed_parameters\"},{\"name\":\"tau\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(NV) + "},\"block\":\"transformed_parameters\"},{\"name\":\"L\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(NV) + ",\"cols\":" + std::to_string(NV) + "},\"block\":\"transformed_parameters\"},{\"name\":\"Yresid\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(Nobs) + ",\"cols\":" + std::to_string(NV) + "},\"block\":\"transformed_parameters\"},{\"name\":\"z\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(NV) + ",\"cols\":" + std::to_string(Nobs) + "},\"block\":\"transformed_parameters\"},{\"name\":\"Sigma\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string((NV + ((NV * (NV - 1)) /2))) + "},\"block\":\"generated_quantities\"}]");
+    return std::string("[{\"name\":\"L_Omega\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(((NV * (NV - 1)) /2)) + "},\"block\":\"parameters\"},{\"name\":\"tau_unif\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(NV) + "},\"block\":\"parameters\"},{\"name\":\"Beta\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(NP) + ",\"cols\":" + std::to_string(NV) + "},\"block\":\"parameters\"},{\"name\":\"mu\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(Nobs) + ",\"cols\":" + std::to_string(NV) + "},\"block\":\"transformed_parameters\"},{\"name\":\"tau\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(NV) + "},\"block\":\"transformed_parameters\"},{\"name\":\"L\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(NV) + ",\"cols\":" + std::to_string(NV) + "},\"block\":\"transformed_parameters\"},{\"name\":\"Yresid\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(Nobs) + ",\"cols\":" + std::to_string(NV) + "},\"block\":\"transformed_parameters\"},{\"name\":\"z\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(NV) + ",\"cols\":" + std::to_string(Nobs) + "},\"block\":\"transformed_parameters\"},{\"name\":\"Sigma\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string((NV + ((NV * (NV - 1)) /2))) + "},\"block\":\"generated_quantities\"},{\"name\":\"Ynew\",\"type\":{\"name\":\"matrix\",\"rows\":" + std::to_string(NewObs) + ",\"cols\":" + std::to_string(NV) + "},\"block\":\"generated_quantities\"}]");
   }
   // Begin method overload boilerplate
   template <typename RNG> inline void
@@ -759,7 +858,8 @@ public:
     const size_t num_params__ = (((NV * NV) + NV) + (NP * NV));
     const size_t num_transformed = emit_transformed_parameters * ((((((Nobs *
       NV) + NV) + (NV * NV)) + (Nobs * NV)) + (NV * Nobs)));
-    const size_t num_gen_quantities = emit_generated_quantities * ((NV * NV));
+    const size_t num_gen_quantities = emit_generated_quantities * (((NV * NV)
+      + (NewObs * NV)));
     const size_t num_to_write = num_params__ + num_transformed +
       num_gen_quantities;
     std::vector<int> params_i;
@@ -777,7 +877,8 @@ public:
     const size_t num_params__ = (((NV * NV) + NV) + (NP * NV));
     const size_t num_transformed = emit_transformed_parameters * ((((((Nobs *
       NV) + NV) + (NV * NV)) + (Nobs * NV)) + (NV * Nobs)));
-    const size_t num_gen_quantities = emit_generated_quantities * ((NV * NV));
+    const size_t num_gen_quantities = emit_generated_quantities * (((NV * NV)
+      + (NewObs * NV)));
     const size_t num_to_write = num_params__ + num_transformed +
       num_gen_quantities;
     vars = std::vector<double>(num_to_write,
