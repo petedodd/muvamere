@@ -1,0 +1,283 @@
+---
+title: "Synthetic populations from multi-study IPD with muvamere"
+author: "Pete Dodd"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Synthetic populations from multi-study IPD with muvamere}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+## Stan fits take minutes, so they only run when asked for, e.g.
+## Sys.setenv(MUVAMERE_VIGNETTE_FIT = "true") before building.
+## TODO: or precompute the fit and ship it in inst/extdata
+run_fits <- identical(Sys.getenv("MUVAMERE_VIGNETTE_FIT"), "true")
+```
+
+# Overview
+
+**muvamere** (MUlti-VAriate MEta-REgression) fits hierarchical
+multivariate regression models to individual patient data (IPD) pooled
+from several studies, and uses the fit to generate synthetic ("artificial")
+populations, e.g. for economic evaluation. The intended workflow is:
+
+| Step | Function(s) |
+|------|-------------|
+| 1. Assemble `Y` (outcomes), `X` (covariates), `study` | your code |
+| 2. Fit the hierarchical model | `mvn_infer_mlm_mixed()` |
+|  (all-continuous data) | `mvn_infer_mlm_sparse()` |
+| 3. Check convergence | `mvn_diagnose()`, `attr(fit, "diagnose")` |
+| 4. Inspect global parameters | `mvn_extract_hyperparams()` |
+| 5. Make a shareable, data-free object | `mvn_make_generator()` |
+|  (audit it) | `mvn_check_generator()` |
+| 6. Generate synthetic cohorts | `mvn_generate_AP()` |
+
+Steps 2-5 can be done by whoever holds the data; the generator object
+from step 5 contains no records and can be passed on for step 6.
+
+TODO: a sentence or two of motivation / link to the paper.
+
+# The model
+
+For record $j$ in study $i$, with covariate row $x_{ij}$, the latent
+outcome vector (one element per variate) is
+
+$$
+y_{ij} \sim \mathrm{MVN}\left(x_{ij} B_i,\;
+  \mathrm{diag}(\tau_i)\, \Omega_i\, \mathrm{diag}(\tau_i)\right).
+$$
+
+* **Regression coefficients** are partially pooled across studies:
+  $B_i = B_M + B_S \circ Z_i$, $Z_i \sim N(0, 1)$ elementwise.
+* **Scales** follow a log-normal hierarchy,
+  $\log \tau_{iv} \sim N(\mu_{\tau,v}, \sigma_{\tau,v})$
+  (`ltaum`, `lsig`).
+* **Correlations.** A global correlation matrix $\Omega_G$
+  (`Omega_global`) has a regularized horseshoe prior on its off-diagonal
+  elements (Piironen and Vehtari 2017), so most pairs are shrunk towards
+  zero. Each study's correlations deviate from it,
+  $\Omega_{i,kl} \sim N(\Omega_{G,kl}, \kappa)$, with the shared
+  deviation strength $\kappa$ estimated; non positive-definite study
+  matrices are rejected.
+* **Binary variates** (in `mvn_infer_mlm_mixed()`) are the indicator that
+  the latent variate exceeds 0 (a multivariate probit), with latent scale
+  fixed at 1. Their correlations are therefore latent (tetrachoric or
+  biserial) correlations. The likelihood is computed exactly with the GHK
+  algorithm.
+* **Missing values** in `Y` are handled under missing-at-random.
+
+A new synthetic study draws its own $B$, $\tau$ and $\Omega$ from these
+distributions, so generated cohorts carry the between-study heterogeneity
+seen in the data.
+
+TODO: say more on the choice of priors / point to model_formulations.
+
+# A worked example with simulated data
+
+```{r libs}
+library(muvamere)
+```
+
+## Simulating data with a known truth
+
+Four variates in an interleaved order: two continuous (`c1`, `c2`) and two
+binary (`b1`, `b2`), with a covariate `x`. The true global correlation is
+sparse: only `c1`-`b1` and `c2`-`b2` are correlated.
+
+```{r truth}
+set.seed(1)
+vars <- c("c1", "b1", "c2", "b2")
+binary <- c(FALSE, TRUE, FALSE, TRUE)
+OG <- diag(4)
+dimnames(OG) <- list(vars, vars)
+OG["c1", "b1"] <- OG["b1", "c1"] <- 0.6
+OG["c2", "b2"] <- OG["b2", "c2"] <- -0.4
+## rows: intercept, x; columns: variates
+betag <- matrix(c(1, 0.2, 1, -0.3, 0.5, 0.3, 1, 0.1), 2, 4,
+  dimnames = list(c("int", "x"), vars)
+)
+betag
+```
+
+`mvn_sample_study_kappa()` simulates one study from the model given its
+global parameters. Here we make three studies of 150 records:
+
+```{r simulate}
+S <- 3
+Np <- 150
+Xlist <- replicate(S, cbind(int = 1, x = runif(Np)), simplify = FALSE)
+Ylist <- lapply(Xlist, function(X) {
+  mvn_sample_study_kappa(X, betag,
+    sigb = matrix(0.05, 2, 4), kappa = 0.05,
+    ltaum = c(0, 0), lsig = c(0.1, 0.1), OmegaG = OG, binary = binary
+  )
+})
+Y <- do.call(rbind, Ylist)
+X <- do.call(rbind, Xlist)
+study <- rep(seq_len(S), each = Np)
+head(Y)
+```
+
+Add some scattered missingness to one continuous and one binary column:
+
+```{r missing}
+Y0 <- Y # complete copy, used for the single-study example below
+Y[sample(nrow(Y), 40), "c2"] <- NA
+Y[sample(nrow(Y), 40), "b2"] <- NA
+colSums(is.na(Y))
+```
+
+## Fitting
+
+`binary` can be a logical vector, column indices or column names. Records
+can be in any order; they are sorted by study internally.
+
+```{r fit, eval = run_fits}
+fit <- mvn_infer_mlm_mixed(Y, X, study,
+  binary = c("b1", "b2"),
+  iter = 1000, chains = 2, cores = 2, seed = 3, refresh = 0
+)
+```
+
+With all-continuous data (and no missing values) use
+`mvn_infer_mlm_sparse()` instead, which takes the same arguments apart
+from `binary` and `min_joint` and is much faster.
+
+Main tuning arguments (defaults were used throughout validation):
+
+* `p0`: prior guess for the number of non-zero correlations among the
+  `choose(NV, 2)` pairs (default 10%, rounded up);
+* `slab_scale`, `slab_df`: regularize large correlations;
+* `kappa_prior_scale`: half-normal scale for $\kappa$;
+* `betaM_prior_sd`, `betaS_prior_sd`, `tauM_prior_sd`, `tauS_prior_sd`.
+
+Anything else in `...` goes to `rstan::sampling()`.
+
+## Checking convergence
+
+Every fit is passed through `mvn_diagnose()`, stored as an attribute, and a
+warning is given if sampling is severely unstable.
+
+```{r diagnose, eval = run_fits}
+attr(fit, "diagnose")
+```
+
+`mvn_diagnose(fit, ...)` can be rerun with other thresholds. A handful of
+divergences can occur with weak data (small studies, large $\kappa$).
+
+TODO: advice on what to do if the checks fail (more iter, adapt_delta,...).
+TODO: this toy example (3 studies x 150) gave 129/1000 divergences and
+ESS 6.8% when test-rendered on 2026-09-26 - pick a better-behaved example
+(more/larger studies?) or discuss it here.
+
+## Global parameters
+
+`mvn_extract_hyperparams()` returns posterior means of the global
+parameters, named and in the original column order (internally the model
+puts continuous variates first):
+
+```{r hyper, eval = run_fits}
+h <- mvn_extract_hyperparams(fit)
+round(h$OmegaG, 2)
+round(h$betag, 2)
+h$kappa
+```
+
+Compare with the truth:
+
+```{r compare, eval = run_fits}
+mvn_compare_cov(OG, h$OmegaG)$rmse[1]
+mvn_compare_means(betag, h$betag)$rmse[1]
+```
+
+For full posterior summaries use the stanfit directly, e.g.
+`rstan::summary(fit, pars = "Omega_global")`.
+
+## A data-free generator
+
+A stanfit can hold record-level information (here, per-record GHK
+uniforms if saved). `mvn_make_generator()` keeps only posterior draws of
+the global hyperparameters plus variable metadata:
+
+```{r generator, eval = run_fits}
+gen <- mvn_make_generator(fit, ndraws = 500)
+gen
+## audit, including for anything with a record-sized dimension
+mvn_check_generator(gen, n_records = nrow(Y))
+```
+
+It can be saved and shared where the data cannot:
+
+```{r save, eval = FALSE}
+saveRDS(gen, "my_generator.rds")
+gen <- readRDS("my_generator.rds")
+mvn_check_generator(gen) # re-audit anything received from elsewhere
+```
+
+Note this removes the data, not all information derived from it: the
+hyperparameter draws are aggregate summaries of the fitted studies, and
+this is not a formal privacy guarantee.
+
+## Generating synthetic cohorts
+
+`mvn_generate_AP()` simulates one new study per covariate matrix in
+`Xlist` (same columns as the fitted `X`). Given a generator, each
+synthetic study uses a different posterior draw, propagating parameter
+uncertainty; given a stanfit, posterior means are plugged in.
+
+```{r generate, eval = run_fits}
+Xnew <- replicate(5, cbind(int = 1, x = runif(1000)), simplify = FALSE)
+ap <- mvn_generate_AP(gen, Xnew)
+head(ap)
+## binaries come back as 0/1
+aggregate(cbind(c1, b1, c2, b2) ~ studyno, data = ap, FUN = mean)
+```
+
+TODO: a plot comparing observed vs synthetic marginals/correlations.
+
+# Single-study fits
+
+For a single study, `mvn_infer()` fits a (continuous) multivariate
+regression with an LKJ prior on the correlation. Passing new covariates
+`Z` gives posterior-predictive draws, extracted as a
+`[draw, row of Z, variate]` array:
+
+```{r single, eval = run_fits}
+fit1 <- mvn_infer(Y0[study == 1, c("c1", "c2")], X[study == 1, ],
+  Z = cbind(1, c(0, 0.5, 1)), iter = 1000, chains = 2, cores = 2,
+  refresh = 0
+)
+pred <- mvn_extract_predictions(fit1)
+dim(pred)
+```
+
+`mvn_infer()` does not handle missing values, hence the complete `Y0`.
+
+# Practical notes and limitations
+
+* **Variable types.** Continuous and binary only; ordinal/categorical
+  variates are not supported. Binary columns must be 0/1 (or logical).
+* **Missing data.** Allowed in `Y` (mixed model only), not in `X`. Every
+  variable and every pair of variables must be jointly observed in at
+  least `min_joint` (default 5) records in *every* study; a variable
+  absent (or almost absent) from a whole study gives an error - drop the
+  variable or the study. A binary that is constant within a study gives
+  a warning.
+* **Categorical covariates** (e.g. HIV status) go into `X` as dummies.
+* **Run time.** The mixed model evaluates the likelihood record by record:
+  roughly an hour for 2 chains $\times$ 1000 iterations with 10 variates
+  and ~2200 records on a laptop; much longer at 20 variates.
+* **Privacy.** Share generators, not fits.
+
+TODO: anything on choosing the covariates / target-population `X`.
+
+# References
+
+Piironen J, Vehtari A (2017). Sparsity information and regularization in
+the horseshoe and other shrinkage priors. *Electronic Journal of
+Statistics* 11(2):5018-5051. doi:10.1214/17-EJS1337SI
+
+TODO: the muvamere / DTB_AP paper.
