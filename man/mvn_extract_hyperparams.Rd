@@ -16,8 +16,12 @@ of BetaM), \code{sigb} (NP x NV matrix, posterior mean of BetaS),
 \code{ltaum}/\code{lsig} (posterior means of the mean and SD of
 log(tau) across studies, one per \emph{continuous} variate),
 \code{OmegaG} (NV x NV matrix, posterior mean of Omega_global),
-\code{model} (\code{"kappa"}), \code{kappa} (scalar) and \code{binary}
-(logical, which variates are binary)
+\code{model} (\code{"kappa"}), \code{kappa} (scalar), \code{binary}
+(logical, which variates are binary), \code{nlev} (levels per
+variate: 0 continuous, 2 binary, K ordinal), \code{levels} (each
+ordinal variate's levels) and \code{cuts} (posterior means of each
+ordinal variate's free cutpoints \eqn{c_2, \dots, c_{K-1}}; \eqn{c_1
+  = 0})
 }
 \description{
 Extract global hyperparameter point estimates from a fitted hierarchical

@@ -12,7 +12,8 @@ mvn_simulate_studies(
   ltaum,
   lsig,
   lkj_global,
-  binary = NULL
+  binary = NULL,
+  cuts = NULL
 )
 }
 \arguments{
@@ -32,6 +33,9 @@ global correlation matrix}
 \item{lkj_global}{global correlation LKJ prior parameter}
 
 \item{binary}{optional logical vector: which variates are binary (see
+\code{mvn_sample_study_kappa()})}
+
+\item{cuts}{optional named list of ordinal cutpoints (see
 \code{mvn_sample_study_kappa()})}
 }
 \value{

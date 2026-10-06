@@ -58,7 +58,7 @@ test_that(".binary_cols accepts logical, indices and names", {
 test_that("mvn_infer_mlm_mixed rejects bad input before sampling", {
   d <- sim_mixed(S = 2, Np = 40)
   expect_error(mvn_infer_mlm_mixed(d$Y, d$X, d$study,
-    binary = rep(FALSE, 4)), "no binary columns")
+    binary = rep(FALSE, 4)), "no binary or ordinal columns")
   Y <- d$Y; Y[1, 2] <- 2
   expect_error(mvn_infer_mlm_mixed(Y, d$X, d$study, binary = d$binary),
     "only 0, 1")

@@ -22,7 +22,8 @@
 ## posterior draws of the global hyperparameters, selected by name and put
 ## in the user's variable order. Returns arrays with draws first:
 ## BetaM/BetaS [nd, NP, NV], ltaum/lsig [nd, NC], Omega_global [nd, NV, NV],
-## kappa [nd].
+## kappa [nd], and cuts: a list, one [nd, K-2] matrix per ordinal variate
+## (the free cutpoints c_2..c_{K-1}; c_1 = 0), empty if there are none.
 .global_draws <- function(fit, idx = NULL) {
   if (!"kappa" %in% names(fit@par_dims)) {
     stop(
@@ -33,7 +34,8 @@
   meta <- .meta_of(fit)
   NP <- fit@par_dims$BetaM[1]
   NV <- fit@par_dims$BetaM[2]
-  NC <- sum(!meta$binary)
+  nlev <- .nlev_of(meta)
+  NC <- sum(nlev == 0)
   mat <- function(par, nr, nc) {
     A <- as.matrix(fit, pars = par)
     if (!is.null(idx)) A <- A[idx, , drop = FALSE]
@@ -64,11 +66,24 @@
     meta$var_names
   )
   dimnames(Og) <- list(NULL, meta$var_names, meta$var_names)
-  cn <- meta$var_names[!meta$binary]
+  cn <- meta$var_names[nlev == 0]
   dimnames(ltaum) <- dimnames(lsig) <- list(NULL, cn)
+  ## cutpoints: Stan's cuts vector runs over the internal discrete order
+  cuts <- list()
+  if (any(nlev > 2)) {
+    A <- as.matrix(fit, pars = "cuts")
+    if (!is.null(idx)) A <- A[idx, , drop = FALSE]
+    off <- 0
+    for (v in meta$perm[nlev[meta$perm] >= 2]) {
+      m <- nlev[v] - 2
+      if (m < 1) next
+      cuts[[meta$var_names[v]]] <- unname(A[, off + seq_len(m), drop = FALSE])
+      off <- off + m
+    }
+  }
   list(
     BetaM = BetaM, BetaS = BetaS, ltaum = ltaum, lsig = lsig,
-    Omega_global = Og, kappa = unname(k)
+    Omega_global = Og, kappa = unname(k), cuts = cuts
   )
 }
 
@@ -81,8 +96,9 @@
 ##' \code{mvn_generate_AP()}) but contains \strong{no study data}: only
 ##' posterior draws of the global hyperparameters (\code{BetaM},
 ##' \code{BetaS}, \code{ltaum}, \code{lsig}, \code{Omega_global},
-##' \code{kappa}) in the original variable order, plus metadata (variable
-##' and covariate names, which variates are binary, fit diagnostics and the
+##' \code{kappa}, and ordinal cutpoints \code{cuts}) in the original
+##' variable order, plus metadata (variable and covariate names, which
+##' variates are binary or ordinal and their levels, fit diagnostics and the
 ##' package version). Nothing record-level (e.g. the mixed model's GHK
 ##' uniforms or imputed missing values) and nothing study-level is kept, and
 ##' no stanfit, environment or function is stored, so the object can be
@@ -114,6 +130,8 @@ mvn_make_generator <- function(fit, ndraws = 1000) {
     draws = .global_draws(fit, idx),
     var_names = meta$var_names,
     binary = meta$binary,
+    nlev = .nlev_of(meta),
+    levels = meta$levels,
     x_names = meta$x_names,
     model = meta$model,
     ndraws = length(idx),
@@ -148,17 +166,18 @@ mvn_make_generator <- function(fit, ndraws = 1000) {
 ##' @export
 mvn_check_generator <- function(g, n_records = NULL) {
   top <- c(
-    "draws", "var_names", "binary", "x_names", "model", "ndraws",
-    "diagnostics", "muvamere_version", "created"
+    "draws", "var_names", "binary", "nlev", "levels", "x_names", "model",
+    "ndraws", "diagnostics", "muvamere_version", "created"
   )
   dr <- c("BetaM", "BetaS", "ltaum", "lsig", "Omega_global", "kappa")
+  dr_opt <- "cuts" # absent from generators made before ordinal support
   problems <- character()
   add <- function(...) problems <<- c(problems, paste0(...))
   if (!inherits(g, "muvamere_generator")) add("not a muvamere_generator")
   if (!is.list(g)) stop("not a list: ", class(g)[1])
   extra <- setdiff(names(g), top)
   if (length(extra)) add("unexpected components: ", toString(extra))
-  extra <- setdiff(names(g$draws), dr)
+  extra <- setdiff(names(g$draws), c(dr, dr_opt))
   if (length(extra)) add("unexpected draws: ", toString(extra))
   miss <- setdiff(dr, names(g$draws))
   if (length(miss)) add("missing draws: ", toString(miss))
@@ -174,7 +193,8 @@ mvn_check_generator <- function(g, n_records = NULL) {
   ## draw arrays: leading dimension = ndraws, others consistent
   nd <- g$ndraws
   NV <- length(g$var_names)
-  NC <- sum(!g$binary)
+  nlev <- .nlev_of(g)
+  NC <- sum(nlev == 0)
   NP <- length(g$x_names)
   want <- list(
     BetaM = c(nd, NP, NV), BetaS = c(nd, NP, NV),
@@ -190,14 +210,28 @@ mvn_check_generator <- function(g, n_records = NULL) {
     }
   }
   if (length(g$draws$kappa) != nd) add("draws$kappa length != ndraws")
+  ordv <- g$var_names[nlev > 2]
+  cuts <- g$draws$cuts %||% list()
+  if (!setequal(names(cuts), ordv)) {
+    add("draws$cuts should hold exactly the ordinal variates: ",
+      toString(ordv))
+  }
+  for (nm in intersect(names(cuts), ordv)) {
+    want <- c(nd, nlev[g$var_names == nm] - 2)
+    if (!identical(as.numeric(dim(cuts[[nm]])), as.numeric(want))) {
+      add("draws$cuts$", nm, " has dim ", toString(dim(cuts[[nm]])),
+        ", expected ", toString(want))
+    }
+  }
   ## nothing record-sized (the draws dimension itself is exempt)
   if (!is.null(n_records)) {
     sizes <- function(x, lead) {
       d <- dim(x) %||% length(x)
       if (lead && length(d) > 1) d[-1] else if (lead) integer(0) else d
     }
-    for (nm in names(g$draws)) {
-      if (any(sizes(g$draws[[nm]], TRUE) == n_records)) {
+    dl <- c(g$draws[setdiff(names(g$draws), "cuts")], cuts)
+    for (nm in names(dl)) {
+      if (any(sizes(dl[[nm]], TRUE) == n_records)) {
         add("draws$", nm, " has a dimension equal to n_records")
       }
     }
@@ -224,6 +258,10 @@ print.muvamere_generator <- function(x, ...) {
   cat("muvamere generator (", x$model, " model): ", length(x$var_names),
     " variates (", sum(x$binary), " binary), ", length(x$x_names),
     " covariates, ", x$ndraws, " posterior draws\n",
+    if (any(.nlev_of(x) > 2)) {
+      paste0("  ordinal:   ", paste0(x$var_names[.nlev_of(x) > 2], " (",
+        .nlev_of(x)[.nlev_of(x) > 2], " levels)", collapse = ", "), "\n")
+    },
     sep = ""
   )
   cat("  variates:  ", paste(x$var_names, collapse = ", "), "\n", sep = "")

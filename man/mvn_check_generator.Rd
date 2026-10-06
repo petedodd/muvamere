@@ -22,7 +22,7 @@ Checks that \code{g} has exactly the expected components, holds no
 functions, environments or S4 objects (such as a stanfit), and that its
 posterior-draw arrays have consistent dimensions. If \code{n_records}
 (the number of records the model was fitted to) is given, also checks
-that no component has a dimension or length equal to it -- a signature
+that no component has a dimension or length equal to it: a signature
 of record-level data. Used automatically by \code{mvn_make_generator()};
 run it again before sharing an object from elsewhere.
 }

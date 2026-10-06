@@ -24,8 +24,9 @@ Builds a small object that can simulate new populations (via
 \code{mvn_generate_AP()}) but contains \strong{no study data}: only
 posterior draws of the global hyperparameters (\code{BetaM},
 \code{BetaS}, \code{ltaum}, \code{lsig}, \code{Omega_global},
-\code{kappa}) in the original variable order, plus metadata (variable
-and covariate names, which variates are binary, fit diagnostics and the
+\code{kappa}, and ordinal cutpoints \code{cuts}) in the original
+variable order, plus metadata (variable and covariate names, which
+variates are binary or ordinal and their levels, fit diagnostics and the
 package version). Nothing record-level (e.g. the mixed model's GHK
 uniforms or imputed missing values) and nothing study-level is kept, and
 no stanfit, environment or function is stored, so the object can be

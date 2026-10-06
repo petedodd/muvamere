@@ -8,7 +8,8 @@ mvn_infer_mlm_mixed(
   Y,
   X,
   study,
-  binary,
+  binary = NULL,
+  ordinal = NULL,
   betaM_prior_sd = 1,
   betaS_prior_sd = 0.5,
   tauM_prior_sd = 1,
@@ -17,6 +18,8 @@ mvn_infer_mlm_mixed(
   slab_scale = 0.5,
   slab_df = 4,
   kappa_prior_scale = 2,
+  cut_prior_sd = 1,
+  min_level = 5,
   min_joint = 5,
   init = NULL,
   iter = 2000,
@@ -35,8 +38,14 @@ continuous columns and binary columns coded 0/1 (or logical), with
 \item{study}{vector of which study each record belongs to}
 
 \item{binary}{which columns of \code{Y} are binary: a logical vector,
-column indices, or column names. At least one is required (use
-\code{mvn_infer_mlm_sparse()} for all-continuous data).}
+column indices, or column names. At least one binary or ordinal
+column is required (use \code{mvn_infer_mlm_sparse()} for
+all-continuous data).}
+
+\item{ordinal}{which columns of \code{Y} are ordinal (3 or more
+levels), specified as for \code{binary}. Ordered factors keep their
+level order; numeric columns use their sorted distinct values. Every
+level must occur in at least \code{min_level} records.}
 
 \item{betaM_prior_sd}{prior SD for the global regression coefficient means}
 
@@ -58,6 +67,12 @@ studies}
 
 \item{kappa_prior_scale}{scale of the half-normal prior on \code{kappa},
 default 2}
+
+\item{cut_prior_sd}{prior SD (half-normal) of the increments between
+successive ordinal cutpoints on the latent (probit) scale, default 1}
+
+\item{min_level}{minimum number of records (pooled over studies) in
+which every level of every ordinal variate must occur (default 5)}
 
 \item{min_joint}{minimum number of records in which every variable and
 every pair of variables must be jointly observed, in every study
@@ -85,7 +100,8 @@ model's internal order (continuous variates first);
 them back to the columns of \code{Y}.
 }
 \description{
-MCMC sampling for mixed continuous and binary data from multiple studies
+MCMC sampling for mixed continuous, binary and ordinal data from multiple
+studies
 }
 \details{
 The mixed-type version of \code{mvn_infer_mlm_sparse()}: the same
@@ -97,6 +113,13 @@ binary is the indicator that a latent normal variate exceeds 0; the
 latent variates have unit scale, so the correlation matrix holds latent
 (tetrachoric, for two binaries; biserial, for a binary and a continuous
 variate) correlations, which are fully identified.
+
+\strong{Ordinal variates} (\code{ordinal}) extend the probit layer: a
+K-level variate is in level k when its latent variate lies between
+cutpoints \eqn{c_k} and \eqn{c_{k+1}}, with \eqn{c_1 = 0} (so, as for a
+binary, the intercept gives the probit of being above the lowest level)
+and K - 2 free increasing cutpoints shared across studies. Their latent
+correlations are polychoric.
 
 \strong{Missing data.} Missing values (\code{NA}) are allowed in
 \code{Y}, in both continuous and binary columns, and are handled exactly

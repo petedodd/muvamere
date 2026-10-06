@@ -13,7 +13,8 @@ mvn_sample_study_kappa(
   lsig,
   OmegaG,
   max_tries = 200,
-  binary = NULL
+  binary = NULL,
+  cuts = NULL
 )
 }
 \arguments{
@@ -42,6 +43,13 @@ are binary. Binary variates have latent scale 1 and are returned as
 0/1 (latent > 0), as in \code{mvn_infer_mlm_mixed()}; \code{ltaum} and
 \code{lsig} then give the continuous variates only. Default: all
 continuous.}
+
+\item{cuts}{optional list of ordinal cutpoints, named by variate (the
+column names of \code{betag}): for a K-level ordinal variate, the K - 2
+increasing free cutpoints \eqn{c_2, \dots, c_{K-1}} of its latent
+variate (\eqn{c_1 = 0}). Ordinal variates have latent scale 1 (like
+binaries, and must not be flagged in \code{binary}) and are returned as
+codes 0..K-1; \code{ltaum} and \code{lsig} exclude them.}
 }
 \value{
 matrix of responses

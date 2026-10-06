@@ -54,11 +54,18 @@ mvn_simulate <- function(X, Beta, Sigma) {
 ##'   0/1 (latent > 0), as in \code{mvn_infer_mlm_mixed()}; \code{ltaum} and
 ##'   \code{lsig} then give the continuous variates only. Default: all
 ##'   continuous.
+##' @param cuts optional list of ordinal cutpoints, named by variate (the
+##'   column names of \code{betag}): for a K-level ordinal variate, the K - 2
+##'   increasing free cutpoints \eqn{c_2, \dots, c_{K-1}} of its latent
+##'   variate (\eqn{c_1 = 0}). Ordinal variates have latent scale 1 (like
+##'   binaries, and must not be flagged in \code{binary}) and are returned as
+##'   codes 0..K-1; \code{ltaum} and \code{lsig} exclude them.
 ##' @return matrix of responses
 ##' @author Pete Dodd
 ##' @export
 mvn_sample_study_kappa <- function(X, betag, sigb, kappa, ltaum, lsig,
-                                   OmegaG, max_tries = 200, binary = NULL) {
+                                   OmegaG, max_tries = 200, binary = NULL,
+                                   cuts = NULL) {
   ## dimensions
   NV <- ncol(betag)
   ## means
@@ -88,12 +95,24 @@ mvn_sample_study_kappa <- function(X, betag, sigb, kappa, ltaum, lsig,
   }
   if (is.null(binary)) binary <- rep(FALSE, NV)
   if (length(binary) != NV) stop("'binary' must have one entry per variate")
-  taus <- rep(1, NV) # binary variates: latent scale 1
-  taus[!binary] <- exp(rnorm(sum(!binary), mean = ltaum, sd = lsig))
+  ordv <- match(names(cuts), colnames(betag))
+  if (anyNA(ordv)) stop("'cuts' must be named by columns of betag")
+  if (any(binary[ordv])) stop("a variate cannot be binary and ordinal")
+  cts <- !binary
+  cts[ordv] <- FALSE
+  taus <- rep(1, NV) # binary/ordinal variates: latent scale 1
+  taus[cts] <- exp(rnorm(sum(cts), mean = ltaum, sd = lsig))
   Sig <- diag(taus, NV) %*% omega %*% diag(taus, NV)
   ## samples
   Y <- mvn_simulate(X, betas, Sig)
   Y[, binary] <- (Y[, binary] > 0) * 1
+  for (k in seq_along(ordv)) {
+    cp <- c(0, cuts[[k]])
+    if (is.unsorted(cp, strictly = TRUE)) {
+      stop("cuts for '", names(cuts)[k], "' must be increasing and > 0")
+    }
+    Y[, ordv[k]] <- findInterval(Y[, ordv[k]], cp, left.open = TRUE)
+  }
   colnames(Y) <- colnames(betag)
   Y
 }
@@ -118,6 +137,8 @@ mvn_sample_study_kappa <- function(X, betag, sigb, kappa, ltaum, lsig,
 ##' @param lkj_global global correlation LKJ prior parameter
 ##' @param binary optional logical vector: which variates are binary (see
 ##'   \code{mvn_sample_study_kappa()})
+##' @param cuts optional named list of ordinal cutpoints (see
+##'   \code{mvn_sample_study_kappa()})
 ##' @return a data frame with responses for all studies, with studyno and obsno
 ##'   columns appended; the drawn global correlation matrix is attached as
 ##'   attribute \code{"OmegaG"}
@@ -127,7 +148,7 @@ mvn_sample_study_kappa <- function(X, betag, sigb, kappa, ltaum, lsig,
 mvn_simulate_studies <- function(Xlist,
                                  betag, sigb,
                                  kappa, ltaum, lsig,
-                                 lkj_global, binary = NULL) {
+                                 lkj_global, binary = NULL, cuts = NULL) {
   ## sample globals:
   OmegaG <- trialr::rlkjcorr(1, ncol(betag), lkj_global)
   ## loop over studies
@@ -136,7 +157,7 @@ mvn_simulate_studies <- function(Xlist,
     SS[[i]] <- mvn_sample_study_kappa(
       Xlist[[i]], betag, sigb,
       kappa, ltaum, lsig, OmegaG,
-      binary = binary
+      binary = binary, cuts = cuts
     )
     SS[[i]] <- as.data.frame(SS[[i]])
     SS[[i]]$studyno <- i

@@ -39,8 +39,12 @@ test_that("mvn_extract_hyperparams gives correctly (re)shaped hyperparams", {
   hyper <- mvn_extract_hyperparams(fit)
   expect_named(
     hyper,
-    c("betag", "sigb", "ltaum", "lsig", "OmegaG", "model", "kappa", "binary")
+    c(
+      "betag", "sigb", "ltaum", "lsig", "OmegaG", "model", "kappa",
+      "binary", "nlev", "levels", "cuts"
+    )
   )
+  expect_length(hyper$cuts, 0) # no ordinal variates
   expect_equal(hyper$model, "kappa")
   expect_equal(dim(hyper$betag), c(2, 3))
   expect_equal(dim(hyper$sigb), c(2, 3))

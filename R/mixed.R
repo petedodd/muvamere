@@ -7,15 +7,98 @@
 ## variable names and types in the user's column order, the permutation to
 ## the model's internal order (continuous first), covariate names, and which
 ## Stan model was used. No record-level information.
-.fit_meta <- function(Y, X, binary, model) {
-  perm <- c(which(!binary), which(binary))
+.fit_meta <- function(Y, X, binary, model, nlev = NULL, levels = NULL) {
+  if (is.null(nlev)) nlev <- ifelse(binary, 2L, 0L)
+  disc <- nlev >= 2
+  perm <- c(which(!disc), which(disc))
   list(
     model = model,
     var_names = colnames(Y),
     binary = unname(binary),
+    nlev = unname(as.integer(nlev)), # 0 continuous, 2 binary, K ordinal
+    levels = levels, # per ordinal variate: its levels in order
     perm = perm, # internal variable k = user column perm[k]
     x_names = colnames(X)
   )
+}
+
+## levels per variate (0 = continuous) of a fit's or generator's metadata;
+## objects made before ordinal support have none: binaries have 2
+.nlev_of <- function(meta) {
+  meta$nlev %||% ifelse(meta$binary, 2L, 0L)
+}
+
+## Encode the ordinal columns of Y as integer codes 0..K-1. Ordered (or
+## plain) factors keep their level order; numeric or character columns use
+## their sorted distinct values. Returns the recoded Y (a data frame) and
+## the levels of each ordinal column.
+.encode_ordinal <- function(Y, ordinal) {
+  Y <- as.data.frame(Y, stringsAsFactors = FALSE)
+  lev <- list()
+  for (j in which(ordinal)) {
+    v <- Y[[j]]
+    nm <- names(Y)[j]
+    if (is.factor(v)) {
+      L <- levels(v)
+      code <- as.integer(v) - 1L
+    } else {
+      L <- sort(unique(v[!is.na(v)]))
+      code <- match(v, L) - 1L
+    }
+    if (length(L) < 3) {
+      stop("ordinal column '", nm, "' has ", length(L), " levels; ",
+        "use 'binary' for two levels",
+        call. = FALSE
+      )
+    }
+    lev[[nm]] <- L
+    Y[[j]] <- code
+  }
+  list(Y = Y, levels = lev)
+}
+
+## Guard rail: every level of every ordinal variate must be observed in at
+## least min_level records (pooled over studies); a rare level leaves its
+## cutpoint barely identified. A level absent from a study is allowed (the
+## cutpoints are shared across studies) but flagged.
+.check_ordinal_levels <- function(Yd, nlev, study, min_level, var_names) {
+  for (j in seq_along(nlev)) {
+    if (nlev[j] <= 2) next
+    v <- Yd[, j]
+    n <- tabulate(v[!is.na(v)] + 1L, nbins = nlev[j])
+    if (any(n < min_level)) {
+      stop("ordinal '", var_names[j], "': level(s) ",
+        paste(which(n < min_level), collapse = ", "),
+        " observed in fewer than min_level = ", min_level,
+        " records; merge rare levels",
+        call. = FALSE
+      )
+    }
+    for (s in unique(study)) {
+      w <- v[study == s & !is.na(v)]
+      if (length(unique(w)) < nlev[j]) {
+        warning("ordinal '", var_names[j], "': not every level occurs in ",
+          "study ", s,
+          call. = FALSE
+        )
+      }
+    }
+  }
+  invisible(TRUE)
+}
+
+## start values for the cutpoint increments: spacings of the pooled
+## marginal probit thresholds, floored at 0.05
+.cut_inits <- function(Yd, nlev) {
+  out <- numeric(0)
+  for (j in seq_along(nlev)) {
+    if (nlev[j] <= 2) next
+    v <- Yd[!is.na(Yd[, j]), j]
+    p <- tabulate(v + 1L, nbins = nlev[j]) / length(v)
+    t <- stats::qnorm(cumsum(p)[seq_len(nlev[j] - 1)])
+    out <- c(out, pmax(diff(t), 0.05))
+  }
+  out
 }
 
 ## default column names where the user gave none
@@ -88,7 +171,8 @@
 }
 
 
-##' MCMC sampling for mixed continuous and binary data from multiple studies
+##' MCMC sampling for mixed continuous, binary and ordinal data from multiple
+##' studies
 ##'
 ##' The mixed-type version of \code{mvn_infer_mlm_sparse()}: the same
 ##' hierarchical deviation-penalty model (per-study regressions partially
@@ -99,6 +183,13 @@
 ##' latent variates have unit scale, so the correlation matrix holds latent
 ##' (tetrachoric, for two binaries; biserial, for a binary and a continuous
 ##' variate) correlations, which are fully identified.
+##'
+##' \strong{Ordinal variates} (\code{ordinal}) extend the probit layer: a
+##' K-level variate is in level k when its latent variate lies between
+##' cutpoints \eqn{c_k} and \eqn{c_{k+1}}, with \eqn{c_1 = 0} (so, as for a
+##' binary, the intercept gives the probit of being above the lowest level)
+##' and K - 2 free increasing cutpoints shared across studies. Their latent
+##' correlations are polychoric.
 ##'
 ##' \strong{Missing data.} Missing values (\code{NA}) are allowed in
 ##' \code{Y}, in both continuous and binary columns, and are handled exactly
@@ -127,8 +218,13 @@
 ##' @param X covariate matrix, one row per record, no missing values
 ##' @param study vector of which study each record belongs to
 ##' @param binary which columns of \code{Y} are binary: a logical vector,
-##'   column indices, or column names. At least one is required (use
-##'   \code{mvn_infer_mlm_sparse()} for all-continuous data).
+##'   column indices, or column names. At least one binary or ordinal
+##'   column is required (use \code{mvn_infer_mlm_sparse()} for
+##'   all-continuous data).
+##' @param ordinal which columns of \code{Y} are ordinal (3 or more
+##'   levels), specified as for \code{binary}. Ordered factors keep their
+##'   level order; numeric columns use their sorted distinct values. Every
+##'   level must occur in at least \code{min_level} records.
 ##' @param betaM_prior_sd prior SD for the global regression coefficient means
 ##' @param betaS_prior_sd prior SD (half-normal) for the between-study
 ##'   regression coefficient SDs
@@ -142,6 +238,10 @@
 ##' @param slab_df slab degrees of freedom, default 4
 ##' @param kappa_prior_scale scale of the half-normal prior on \code{kappa},
 ##'   default 2
+##' @param cut_prior_sd prior SD (half-normal) of the increments between
+##'   successive ordinal cutpoints on the latent (probit) scale, default 1
+##' @param min_level minimum number of records (pooled over studies) in
+##'   which every level of every ordinal variate must occur (default 5)
 ##' @param min_joint minimum number of records in which every variable and
 ##'   every pair of variables must be jointly observed, in every study
 ##'   (default 5)
@@ -162,22 +262,43 @@
 ##' @author Pete Dodd
 ##' @export
 ##' @import rstan
-mvn_infer_mlm_mixed <- function(Y, X, study, binary,
+mvn_infer_mlm_mixed <- function(Y, X, study, binary = NULL,
+                                ordinal = NULL,
                                 betaM_prior_sd = 1,
                                 betaS_prior_sd = 0.5,
                                 tauM_prior_sd = 1,
                                 tauS_prior_sd = 0.5,
                                 p0 = NULL, slab_scale = 0.5, slab_df = 4,
                                 kappa_prior_scale = 2,
+                                cut_prior_sd = 1, min_level = 5,
                                 min_joint = 5,
                                 init = NULL,
                                 iter = 2e3, cores = 4, chains = 4, ...) {
-  Y <- .named(Y, "V")
+  if (is.null(colnames(Y))) colnames(Y) <- paste0("V", seq_len(ncol(Y)))
   X <- .named(X, "X")
-  binary <- .binary_cols(binary, Y)
-  if (!any(binary)) {
-    stop("no binary columns: use mvn_infer_mlm_sparse() for continuous data")
+  binary <- if (is.null(binary)) {
+    rep(FALSE, ncol(Y))
+  } else {
+    .binary_cols(binary, Y)
   }
+  ordinal <- if (is.null(ordinal)) {
+    rep(FALSE, ncol(Y))
+  } else {
+    .binary_cols(ordinal, Y)
+  }
+  if (any(binary & ordinal)) {
+    stop("columns cannot be both binary and ordinal: ",
+      paste(colnames(Y)[binary & ordinal], collapse = ", "))
+  }
+  if (!any(binary | ordinal)) {
+    stop("no binary or ordinal columns: use mvn_infer_mlm_sparse() for ",
+      "continuous data")
+  }
+  enc <- .encode_ordinal(Y, ordinal)
+  nlev <- ifelse(binary, 2L, 0L)
+  nlev[ordinal] <- lengths(enc$levels)
+  Y <- as.matrix(enc$Y)
+  if (!is.numeric(Y)) stop("continuous and binary columns must be numeric")
   if (ncol(Y) < 2) stop("need at least 2 variates (columns of Y)")
   if (anyNA(X)) stop("X must not contain missing values")
   Yb_user <- Y[, binary, drop = FALSE]
@@ -185,11 +306,12 @@ mvn_infer_mlm_mixed <- function(Y, X, study, binary,
   if (any(!is.na(Yb_user) & !(Yb_user %in% c(0, 1)))) {
     stop("binary columns must contain only 0, 1 (or TRUE/FALSE) and NA")
   }
-  meta <- .fit_meta(Y, X, binary, "mixed")
-  ## internal order: continuous first, then binary
+  meta <- .fit_meta(Y, X, binary, "mixed", nlev, enc$levels)
+  ## internal order: continuous first, then binary/ordinal
   Y <- Y[, meta$perm, drop = FALSE]
-  NC <- sum(!binary)
-  NB <- sum(binary)
+  NC <- sum(nlev == 0)
+  NB <- sum(nlev >= 2)
+  nlev_d <- nlev[meta$perm][NC + seq_len(NB)]
   NV <- NC + NB
   srt <- .sort_by_study(Y, X, study)
   Y <- srt$Y
@@ -197,9 +319,11 @@ mvn_infer_mlm_mixed <- function(Y, X, study, binary,
   study <- srt$study
   obs <- !is.na(Y)
   .check_joint_observation(obs, study, min_joint, colnames(Y))
+  .check_ordinal_levels(Y[, NC + seq_len(NB), drop = FALSE], nlev_d, study,
+    min_level, colnames(Y)[NC + seq_len(NB)])
   ## a binary constant within a study carries no information on that
   ## study's correlations with it: allowed, but flagged
-  for (j in NC + seq_len(NB)) {
+  for (j in NC + which(nlev_d == 2)) {
     for (s in unique(study)) {
       v <- Y[study == s & obs[, j], j]
       if (length(unique(v)) == 1) {
@@ -225,6 +349,10 @@ mvn_infer_mlm_mixed <- function(Y, X, study, binary,
     kappa_prior_scale > 0)) {
     stop("kappa_prior_scale must be a single positive number")
   }
+  if (!(is.numeric(cut_prior_sd) && length(cut_prior_sd) == 1 &&
+    cut_prior_sd > 0)) {
+    stop("cut_prior_sd must be a single positive number")
+  }
   Yc <- Y[, seq_len(NC), drop = FALSE]
   miss_c <- which(is.na(Yc), arr.ind = TRUE)
   miss_c <- matrix(as.integer(miss_c), ncol = 2)
@@ -234,12 +362,13 @@ mvn_infer_mlm_mixed <- function(Y, X, study, binary,
   storage.mode(Yb) <- "integer"
   shdata <- list(
     Nrecords = nrow(Y), Nstudies = length(unique(study)), study = study,
-    NP = ncol(X), NC = NC, NB = NB, X = X, Yc = Yc, Yb = Yb,
+    NP = ncol(X), NC = NC, NB = NB, nlev = array(nlev_d, NB),
+    X = X, Yc = Yc, Yb = Yb,
     Nmiss_c = nrow(miss_c), miss_c = miss_c,
     betaM_prior_sd = betaM_prior_sd, betaS_prior_sd = betaS_prior_sd,
     tauM_prior_sd = tauM_prior_sd, tauS_prior_sd = tauS_prior_sd,
     p0 = p0, slab_scale = slab_scale, slab_df = slab_df,
-    kappa_prior_scale = kappa_prior_scale
+    kappa_prior_scale = kappa_prior_scale, cut_prior_sd = cut_prior_sd
   )
   if (is.null(init)) {
     ## informed Omega_global start from the crude data (missing -> column
@@ -249,10 +378,12 @@ mvn_infer_mlm_mixed <- function(Y, X, study, binary,
       v
     })
     cm <- colMeans(Y[, seq_len(NC), drop = FALSE], na.rm = TRUE)
+    ci <- .cut_inits(Y[, NC + seq_len(NB), drop = FALSE], nlev_d)
     init <- lapply(
       .rhs_kappa_inits(crude, X, study, chains, slab_scale),
       function(l) {
         l$u <- matrix(0.5, nrow(Y), NB)
+        l$cinc <- array(ci, length(ci))
         if (nrow(miss_c)) {
           l$ymiss <- array(cm[miss_c[, 2]], nrow(miss_c))
         }

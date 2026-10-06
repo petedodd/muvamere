@@ -27,7 +27,9 @@ Simulates one new study per target design matrix in \code{Xlist}, each
 with its own study-level correlations, regression coefficients and
 scales drawn around the fitted global hyperparameters (so the generated
 cohorts reflect the fitted between-study heterogeneity), via
-\code{mvn_sample_study_kappa()}. Binary variates are returned as 0/1.
+\code{mvn_sample_study_kappa()}. Binary variates are returned as 0/1,
+and ordinal variates with their original levels (as an ordered factor
+if they were fitted as a factor).
 
 Given a \emph{generator} (\code{mvn_make_generator()}), each synthetic
 study uses a different random posterior draw of the global

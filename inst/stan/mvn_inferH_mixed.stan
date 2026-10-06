@@ -19,22 +19,65 @@
    (z_j = inv_Phi(u), no log-lik term): exact marginalisation under MAR.
    Missing continuous values are parameters (ymiss).
 
+   Ordinal variates (nlev[j] = K > 2 levels, coded 0..K-1) share the
+   binary block: Y_nj = k iff c_k < Y*_nj <= c_{k+1}, with c_0 = -inf,
+   c_1 = 0 (so the intercept has the binary meaning, P(Y >= 1) =
+   Phi(mu)), c_K = +inf and K-2 free increasing cutpoints c_2..c_{K-1}
+   SHARED across studies (study intercepts carry the shifts). The GHK step
+   is then a two-sided truncation; binaries (K = 2) use the original
+   one-sided code unchanged.
+
    The u (and ymiss) are per-record quantities that, with the other
    parameters, reveal individual records: the R wrapper does not save them
    by default, and mvn_make_generator() never keeps them.
 
-   Records must be sorted by study. At least one binary variate is required
-   (use mvn_inferH_sparse_kappa.stan for all-continuous data). */
+   Records must be sorted by study. At least one binary or ordinal variate
+   is required (use mvn_inferH_sparse_kappa.stan for all-continuous data).
+*/
+functions{
+  // GHK step for latent truncated to (lo, hi] (has_lo/has_hi = 0 for an
+  // infinite bound), standardised as z = (lo or hi)/Ljj - pre. Returns
+  // [log P(interval), z draw]. A two-sided interval gives z = the
+  // u-quantile of the truncated normal (continuous in the parameters),
+  // computed from the upper tail when a > 0 for accuracy.
+  vector ghk_interval(real pre, real Ljj, int has_lo, real lo, int has_hi,
+                      real hi, real u){
+    vector[2] out;
+    real p;
+    real a = has_lo ? lo / Ljj - pre : 0;
+    real b = has_hi ? hi / Ljj - pre : 0;
+    if(!has_lo){
+      p = Phi(b);
+      out[2] = inv_Phi(p * u);
+    } else if(!has_hi){
+      p = Phi(-a);
+      out[2] = -inv_Phi(p * u);
+    } else if(a > 0){
+      // same u-quantile as the branch below (continuous in a), computed
+      // from the upper tail: P(Z <= z) = u  <=>  P(-Z < -z) = 1 - u
+      real pb = Phi(-b);
+      p = Phi(-a) - pb;
+      out[2] = -inv_Phi(pb + p * (1 - u));
+    } else {
+      real pa = Phi(a);
+      p = Phi(b) - pa;
+      out[2] = inv_Phi(pa + p * u);
+    }
+    out[1] = log(p);
+    return out;
+  }
+}
 data{
   int Nrecords;
   int Nstudies;
   int study[Nrecords];
   int NP;
   int<lower=0> NC;                 //continuous variates (first)
-  int<lower=1> NB;                 //binary variates (after the continuous)
+  int<lower=1> NB;                 //binary/ordinal variates (after the cts)
+  int<lower=2> nlev[NB];           //levels of each (2 = binary)
   matrix[Nrecords,NP] X;
   matrix[Nrecords,NC] Yc;          //continuous outcomes (missing: any value)
-  int<lower=-1,upper=1> Yb[Nrecords,NB]; //binary: 0/1, or -1 = missing
+  int<lower=-1> Yb[Nrecords,NB];   //level 0..nlev-1, or -1 = missing
   int<lower=0> Nmiss_c;            //number of missing continuous cells
   int miss_c[Nmiss_c,2];           //(record, column) of each missing cell
   real betaM_prior_sd;
@@ -47,6 +90,8 @@ data{
   real<lower=0> slab_df;           //degrees of freedom of the slab
   //scale of the half-normal prior on kappa (study-deviation strength)
   real<lower=0> kappa_prior_scale;
+  //prior SD (half-normal) of ordinal cutpoint increments (probit scale)
+  real<lower=0> cut_prior_sd;
 }
 transformed data{
   int NV = NC + NB;
@@ -56,6 +101,14 @@ transformed data{
   real T_scale;
   int loc[NV,NV];
   int k = 1;
+  int NCUT = 0;                    //free cutpoints, all ordinal variates
+  int cs[NB];                      //offset of variate j's cutpoints
+  for(j in 1:NB){
+    cs[j] = NCUT;
+    NCUT += nlev[j] - 2;
+  }
+  for(n in 1:Nrecords) for(j in 1:NB) if(Yb[n,j] >= nlev[j])
+    reject("Yb[", n, ",", j, "] exceeds nlev - 1");
   if(NV < 2) reject("NV must be at least 2");
   if(p0 >= D_R) reject("p0 must be < choose(NV,2) = ", D_R);
   T_scale = p0 / (D_R - p0) / sqrt(Nrecords);
@@ -94,6 +147,7 @@ parameters{
   vector<lower=0>[NC] lsig;        //global log-scale SDs (continuous)
   vector<lower=0,upper=1>[NB] u[Nrecords]; //GHK uniforms (per record)
   vector[Nmiss_c] ymiss;           //missing continuous values (per record)
+  vector<lower=0>[NCUT] cinc;      //ordinal cutpoint increments
 }
 transformed parameters{
   real<lower=0> c = slab_scale * sqrt(caux);
@@ -103,6 +157,12 @@ transformed parameters{
   matrix[NV,NV] Omega_s[Nstudies];
   matrix[NP,NV] Betas[Nstudies];
   vector[NC] tau[Nstudies];
+  vector[NCUT] cuts;               //c_2..c_{K-1} per ordinal variate
+  for(j in 1:NB){
+    for(m in 1:(nlev[j] - 2)){
+      cuts[cs[j] + m] = (m == 1 ? 0 : cuts[cs[j] + m - 1]) + cinc[cs[j] + m];
+    }
+  }
   for(i in 1:(NV-1)){
     for(j in (i+1):NV){
       real v = zg[loc[i,j]] * T * lam_tilde[loc[i,j]];
@@ -143,6 +203,7 @@ model{
   lsig ~ normal(0, tauS_prior_sd);      //half-normal (lsig has lower=0)
   to_vector(BetaM) ~ normal(0, betaM_prior_sd);
   to_vector(BetaS) ~ normal(0, betaS_prior_sd);
+  cinc ~ normal(0, cut_prior_sd);       //half-normal (cinc has lower=0)
   for(i in 1:Nstudies){
     tz[i] ~ std_normal();
     rr[i] ~ normal(og, kappa);
@@ -173,7 +234,16 @@ model{
         real pre = Mu[r,jj];
         if(jj > 1) pre += L[jj,1:(jj-1)] * z[1:(jj-1)];
         pre /= L[jj,jj];
-        if(Yb[n,j] == 1){          //latent > 0  <=>  z_jj > -pre
+        if(Yb[n,j] >= 0 && nlev[j] > 2){ //ordinal: (c_y, c_{y+1}]
+          int y = Yb[n,j];
+          int top = y == nlev[j] - 1;
+          real lo = y >= 2 ? cuts[cs[j] + y - 1] : 0;
+          real hi = (y >= 1 && !top) ? cuts[cs[j] + y] : 0;
+          vector[2] g = ghk_interval(pre, L[jj,jj], y >= 1, lo, !top, hi,
+                                     u[n][j]);
+          z[jj] = g[2];
+          target += g[1];
+        } else if(Yb[n,j] == 1){   //latent > 0  <=>  z_jj > -pre
           real p = Phi(pre);
           z[jj] = -inv_Phi(p * u[n][j]);
           target += log(p);

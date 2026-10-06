@@ -23,8 +23,12 @@
 ##'   \code{ltaum}/\code{lsig} (posterior means of the mean and SD of
 ##'   log(tau) across studies, one per \emph{continuous} variate),
 ##'   \code{OmegaG} (NV x NV matrix, posterior mean of Omega_global),
-##'   \code{model} (\code{"kappa"}), \code{kappa} (scalar) and \code{binary}
-##'   (logical, which variates are binary)
+##'   \code{model} (\code{"kappa"}), \code{kappa} (scalar), \code{binary}
+##'   (logical, which variates are binary), \code{nlev} (levels per
+##'   variate: 0 continuous, 2 binary, K ordinal), \code{levels} (each
+##'   ordinal variate's levels) and \code{cuts} (posterior means of each
+##'   ordinal variate's free cutpoints \eqn{c_2, \dots, c_{K-1}}; \eqn{c_1
+##'   = 0})
 ##' @author Pete Dodd
 ##' @export
 mvn_extract_hyperparams <- function(fit) {
@@ -43,7 +47,10 @@ mvn_extract_hyperparams <- function(fit) {
     OmegaG = m3(d$Omega_global),
     model = "kappa",
     kappa = mean(d$kappa),
-    binary = meta$binary
+    binary = meta$binary,
+    nlev = .nlev_of(meta),
+    levels = meta$levels,
+    cuts = lapply(d$cuts, colMeans)
   )
 }
 
@@ -55,7 +62,9 @@ mvn_extract_hyperparams <- function(fit) {
 ##' with its own study-level correlations, regression coefficients and
 ##' scales drawn around the fitted global hyperparameters (so the generated
 ##' cohorts reflect the fitted between-study heterogeneity), via
-##' \code{mvn_sample_study_kappa()}. Binary variates are returned as 0/1.
+##' \code{mvn_sample_study_kappa()}. Binary variates are returned as 0/1,
+##' and ordinal variates with their original levels (as an ordered factor
+##' if they were fitted as a factor).
 ##'
 ##' Given a \emph{generator} (\code{mvn_make_generator()}), each synthetic
 ##' study uses a different random posterior draw of the global
@@ -80,11 +89,13 @@ mvn_generate_AP <- function(fit, Xlist) {
     binary <- fit$binary
     nms <- fit$var_names
     np <- length(fit$x_names)
+    levs <- fit$levels
   } else {
     hyper <- mvn_extract_hyperparams(fit)
     binary <- hyper$binary
     nms <- colnames(hyper$betag)
     np <- nrow(hyper$betag)
+    levs <- hyper$levels
   }
   SS <- list()
   for (i in seq_along(Xlist)) {
@@ -103,16 +114,27 @@ mvn_generate_AP <- function(fit, Xlist) {
       colnames(betag) <- nms
       SS[[i]] <- mvn_sample_study_kappa(
         Xlist[[i]], betag, sigb, d$kappa[k], d$ltaum[k, ], d$lsig[k, ],
-        d$Omega_global[k, , ], binary = binary
+        d$Omega_global[k, , ],
+        binary = binary,
+        cuts = lapply(d$cuts, function(m) m[k, ])
       )
     } else {
       SS[[i]] <- mvn_sample_study_kappa(
         Xlist[[i]], hyper$betag, hyper$sigb,
         hyper$kappa, hyper$ltaum, hyper$lsig, hyper$OmegaG,
-        binary = binary
+        binary = binary, cuts = hyper$cuts
       )
     }
     SS[[i]] <- as.data.frame(SS[[i]])
+    for (nm in names(levs)) {
+      L <- levs[[nm]]
+      v <- L[SS[[i]][[nm]] + 1]
+      SS[[i]][[nm]] <- if (is.character(L)) {
+        factor(v, levels = L, ordered = TRUE)
+      } else {
+        v
+      }
+    }
     SS[[i]]$studyno <- i
     SS[[i]]$obsno <- 1:nrow(SS[[i]])
   }
